@@ -10,4 +10,5 @@ public class ServiceUsage : BaseEntity
     public virtual BookingDetail BookingDetail { get; set; } = null!;
     public int ServiceId { get; set; }
     public Service Service { get; set; } = null!;
+    
 }
