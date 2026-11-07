@@ -1,0 +1,24 @@
+﻿
+# Build output
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Rider
+.idea/
+
+# NuGet
+*.nupkg
+packages/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
