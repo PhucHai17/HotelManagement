@@ -1,4 +1,14 @@
-﻿
+﻿# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Build
+bin/
+obj/
+
+# IDE
+.idea/
 # .NET build files
 [Bb]in/
 [Oo]bj/
