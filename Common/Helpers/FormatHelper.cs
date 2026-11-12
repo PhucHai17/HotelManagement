@@ -6,36 +6,29 @@ namespace Common.Helpers;
 
 public static class FormatHelper
 {
-    private static readonly CultureInfo VietnameseCulture =
-        CultureInfo.GetCultureInfo(AppConstants.CurrencyCulture);
-
-
-    /// Định dạng tiền tệ Việt Nam.
+    private static readonly CultureInfo VietnameCulture =
+        new("vi-VN");
     public static string FormatCurrency(decimal amount)
     {
-        return amount.ToString("N0", VietnameseCulture) + " ₫";
+        return amount.ToString("N0", VietnameCulture) + " ₫";
     }
-    /// Định dạng ngày tháng.
     public static string FormatDate(DateTime date)
     {
         return date.ToString(
-            AppConstants.DateFormat,
-            VietnameseCulture);
+            AppConstants.DateFormat);
     }
-    
-    /// Định dạng ngày giờ.
-    public static string FormatDateTime(DateTime dateTime)
+
+    public static DateTime ParseDate(string text)
     {
-        return dateTime.ToString(
-            AppConstants.DateTimeFormat,
-            VietnameseCulture);
+        if (DateTime.TryParseExact(text, AppConstants.DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var exact))
+            return exact;
+        if (DateTime.TryParse(text, out var loose))
+            return loose;
+        return DateTime.Today;
     }
-    
-    /// Định dạng giờ.
-    public static string FormatTime(DateTime time)
+    public static int CalculateNights(DateTime checkIn, DateTime checkOut)
     {
-        return time.ToString(
-            AppConstants.TimeFormat,
-            VietnameseCulture);
+        var days = (int)(checkOut.Date - checkIn.Date).TotalDays;
+        return days > 0 ? days : 1;
     }
 }

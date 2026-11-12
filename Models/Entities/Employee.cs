@@ -1,6 +1,6 @@
 ﻿namespace Entity.Entities;
 
-public class Employee : BaseEntity
+public class Employee :Person
 {
     public string EmployeeCode { get; set; } =  string.Empty;
     public string FullName { get; set; }= string.Empty;

@@ -1,14 +1,17 @@
 ﻿namespace Entity.Entities;
 
-public class ServiceUsage : BaseEntity
+public class ServiceUsage
 {
-    public int Quantity { get; set; }
-    public decimal UnitPrice { get; set; }
-    public decimal TotalAmount => Quantity * UnitPrice;
-    public DateTime UsageTime { get; set; } = DateTime.Now;
+    public int UsageId { get; set; }
     public int BookingDetailId { get; set; }
-    public virtual BookingDetail BookingDetail { get; set; } = null!;
     public int ServiceId { get; set; }
-    public Service Service { get; set; } = null!;
-    
+    public int Quantity { get; set; } = 1;
+    public double UnitPrice { get; set; }
+    public string UsageDate { get; set; } = string.Empty;
+    public string ServiceName { get; set; } = string.Empty;
+    // donvitinh
+    public string Unit { get; set; } = string.Empty;
+    public string RoomNumber { get; set; } = string.Empty;
+    // thành tiền = số lượng x đơn giá
+    public double LineTotal => Quantity * UnitPrice;
 }

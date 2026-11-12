@@ -1,12 +1,18 @@
-﻿using Entity.Enums;
-
+﻿using Entity.Constants;
 namespace Entity.Entities;
 
-public class Account : BaseEntity
-{
+public class Account {
+    public int AccountId { get; set; }
+    public int RoleId { get; set; }
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
-    public UserRole Role;
-    public bool IsActive { get; set; }
+    public int FailedLoginCount { get; set; }
+    public string Status { get; set; } = AccountStatus.Active;
+    public string RoleName { get; set; } = string.Empty;
+    public Account() { }
+    public Account(int accountId, int roleId, string username, string passwordHash, string status)
+    {
+        AccountId = accountId; RoleId = roleId; Username = username; PasswordHash = passwordHash; Status = status;
+    }
     
 }
