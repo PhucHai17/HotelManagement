@@ -1,21 +1,37 @@
-﻿using System.Data;
-using System.Data.SQLite;
+﻿using Microsoft.Data.Sqlite;
 
 namespace DAL.Database;
 
 public class DBConnection
 {
-    private readonly string _connectionString;
+    public static readonly string DatabasePath = Path.Combine(
+        AppContext.BaseDirectory,
+        "DAL", "Scripts", "hotelmanagement.db"
+    );
 
-    public DBConnection(string connectionString)
+    private static readonly string ConnectionString =
+        new SqliteConnectionStringBuilder
+        {
+            DataSource = DatabasePath,
+            Mode = SqliteOpenMode.ReadWrite,
+            ForeignKeys = true
+        }.ToString();
+
+    public static void EnsureDatabaseExists()
     {
-        _connectionString = connectionString;
+        if (!File.Exists(DatabasePath))
+        {
+            throw new FileNotFoundException(
+                "Không tìm thấy file CSDL hotelmanagement.db.",
+                DatabasePath
+            );
+        }
     }
 
-    public IDbConnection CreateConnection()
+    public static SqliteConnection CreateConnection()
     {
-        var connection = new SQLiteConnection(_connectionString);
-        connection.Open();
-        return connection;
+        EnsureDatabaseExists();
+
+        return new SqliteConnection(ConnectionString);
     }
 }

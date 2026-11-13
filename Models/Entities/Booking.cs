@@ -1,4 +1,4 @@
-﻿using Entity.Constants;
+﻿using Entity.Enums;
 
 namespace Entity.Entities;
 
@@ -21,9 +21,9 @@ public class Booking
     // tien cọc
     public double Deposit { get; set; } = 0.0;
     // kênh đặt phòng
-    public string Channel { get; set; } = BookingChannel.Direct;
+    public string Channel { get; set; } = "Trực tiếp";
     // trạng thái
-    public string Status { get; set; } = BookingStatus.Pending;
+    public BookingStatus Status { get; set; } = BookingStatus.Pending;
     public string CustomerName { get; set; } = string.Empty;
     // sđt
     public string CustomerPhone { get; set; } = string.Empty;
@@ -34,7 +34,5 @@ public class Booking
     public string RoomTypeName { get; set; } = string.Empty;
     // tổng tiền
     public double TotalAmount { get; set; }
-    //mã chi tiết đặt phòng
-    public int BookingDetailId { get; set; }
     public string DisplayCode => $"DP{BookingId:D3}";
 }

@@ -1,16 +1,69 @@
+
+using Common.Constants;
+using Common.Helpers;
+using DAL.Database;
+using UI.Forms;
+
 namespace UI;
 
-static class Program
+public static class Program
 {
-    /// <summary>
-    ///  The main entry point for the application.
-    /// </summary>
     [STAThread]
-    static void Main()
+    public static void Main()
     {
-        // To customize application configuration such as set high DPI settings or default font,
-        // see https://aka.ms/applicationconfiguration.
-        ApplicationConfiguration.Initialize();
-        Application.Run(new Form1());
+        // Xử lý lỗi toàn cục
+        Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+
+        Application.ThreadException += (_, e) =>
+            HandleException(e.Exception);
+
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            HandleException(e.ExceptionObject as Exception
+                            ?? new Exception("Lỗi không xác định."));
+
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            AppLogger.Error(e.Exception, "Lỗi tác vụ nền");
+            e.SetObserved();
+        };
+
+        // Cấu hình giao diện
+        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+        Application.SetDefaultFont(new Font(AppConstants.FontChuChinh, 10f));
+
+        // Khởi tạo database
+        try
+        {
+            DBConnection.EnsureDatabaseExists();
+            
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error(ex, "Khởi tạo database");
+
+            MessageBox.Show(
+                $"Không thể khởi tạo database: {ex.Message}",
+                "Lỗi hệ thống",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+        }
+
+        // Mở màn hình đăng nhập
+        Application.Run(new LoginForm());
+    }
+
+    private static void HandleException(Exception ex)
+    {
+        AppLogger.Error(ex, "Lỗi toàn cục");
+
+        MessageBox.Show(
+            $"Đã xảy ra lỗi: {ex.Message}",
+            "Lỗi hệ thống",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Error
+        );
     }
 }

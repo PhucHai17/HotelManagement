@@ -1,22 +1,45 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
+        <TargetFramework>net10.0-windows</TargetFramework>
         <Nullable>enable</Nullable>
+        <UseWindowsForms>true</UseWindowsForms>
+        <ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        <PrivateAssets>all</PrivateAssets>
-      </PackageReference>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
-      <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Models\Models.csproj" />
+        <ProjectReference Include="..\Common\Common.csproj" />
+        <ProjectReference Include="..\Models\Models.csproj" />
     </ItemGroup>
+
+<ItemGroup>
+    <Using Include="System" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="System.Data" />
+    <Using Include="System.IO" />
+    <Using Include="System.Linq" />
+
+    <Using Include="Common.Constants" />
+    <Using Include="Common.Helpers" />
+
+    <Using Include="Entity.Entities" />
+    <Using Include="Entity.DTOs" />
+    <Using Include="Entity.Enums" />
+
+    <Using Include="DAL.Database" />
+    <Using Include="DAL.Interfaces" />
+    <Using Include="DAL.Repositories" />
+</ItemGroup>
+
+<ItemGroup>
+    <Content Include="Scripts\hotelmanagement.db">
+        <Link>DAL\Scripts\hotelmanagement.db</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+</ItemGroup>
 
 </Project>
