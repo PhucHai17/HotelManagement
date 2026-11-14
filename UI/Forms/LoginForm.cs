@@ -109,7 +109,7 @@ public class LoginForm : Form
         pnlRememberForgot.Controls.Add(lnkQuenMK);
         flowForm.Controls.Add(pnlRememberForgot);
 
-        // Nút Đăng nhập chính (màu vàng đồng bo góc có hiệu ứng hover)
+        // Nút Đăng nhập chính
         btnDangNhap = new Button
         {
             Text = "Đăng nhập",
