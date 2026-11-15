@@ -9,7 +9,7 @@ public class DBConnection
         "DAL", "Scripts", "hotelmanagement.db"
     );
 
-    private static readonly string ConnectionString =
+    public static readonly string ConnectionString =
         new SqliteConnectionStringBuilder
         {
             DataSource = DatabasePath,

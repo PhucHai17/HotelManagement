@@ -15,4 +15,8 @@
         <ProjectReference Include="..\Models\Models.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.14" />
+    </ItemGroup>
+
 </Project>

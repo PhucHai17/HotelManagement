@@ -1,9 +1,4 @@
 using BLL.Interfaces;
-using Common.Constants;
-using Common.Helpers;
-using DAL.Interfaces;
-using DAL.Repositories;
-using Entity.Entities;
 
 namespace BLL.Services;
 
@@ -63,7 +58,7 @@ public class AuthService : IAuthService
         }
 
         var user = username.Trim();
-        var pass = password.Trim();
+        var pass = password;
 
         // Truy vấn và xác thực tài khoản qua repository
         var account = _accountRepo.Login(user, pass);

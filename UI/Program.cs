@@ -11,6 +11,8 @@ public static class Program
     [STAThread]
     public static void Main()
     {
+        DBConnection.EnsureDatabaseExists();
+        PasswordMigrationHelper.MigratePlainTextPasswords(DBConnection.ConnectionString);
         // Xử lý lỗi toàn cục
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
 
@@ -67,3 +69,4 @@ public static class Program
         );
     }
 }
+  

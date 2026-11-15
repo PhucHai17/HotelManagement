@@ -8,19 +8,21 @@ public class AccountRepository : BaseRepository, IAccountRepository
     // Kiểm tra đăng nhập bằng cách đối chiếu hash SHA-256 qua PasswordHelper
     public Account? Login(string username, string password)
     {
-        
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
             return null;
 
         var sql = $@"
-                SELECT tk.*, vt.TenVT 
-                FROM TaiKhoan tk
-                LEFT JOIN VaiTro vt ON tk.MaVT = vt.MaVT
-                WHERE LOWER(tk.TenDangNhap) = LOWER(@TenDangNhap)
-                  AND {AccountStatusHelper.BuildNotLockedSqlCondition("tk.TrangThai")}
-                LIMIT 1;";
+        SELECT tk.*, vt.TenVT 
+        FROM TaiKhoan tk
+        LEFT JOIN VaiTro vt ON tk.MaVT = vt.MaVT
+        LEFT JOIN KhachHang kh ON tk.MaTK = kh.MaTK
+        WHERE (LOWER(tk.TenDangNhap) = LOWER(@TenDangNhap)
+               OR LOWER(kh.Email) = LOWER(@TenDangNhap)
+               OR kh.SDT = @TenDangNhap)
+          AND {AccountStatusHelper.BuildNotLockedSqlCondition("tk.TrangThai")}
+        LIMIT 1;";
 
-        var table = DatabaseHelper.ExecuteDataTable(sql, CreateParameter("@TenDangNhap", username));
+        var table = DatabaseHelper.ExecuteDataTable(sql, CreateParameter("@TenDangNhap", username.Trim()));
         if (table.Rows.Count == 0) return null;
 
         var account = MapToAccount(table.Rows[0]);
@@ -33,15 +35,16 @@ public class AccountRepository : BaseRepository, IAccountRepository
         return account;
     }
 
-    // Tạo tài khoản mới
     public int CreateAccount(Account account)
     {
         var sql = @"
-                INSERT INTO TaiKhoan (MaVT, TenDangNhap, MatKhauHash, TrangThai)
-                VALUES (@MaVT, @TenDangNhap, @MatKhauHash, @TrangThai);
-                SELECT last_insert_rowid();";
+        INSERT INTO TaiKhoan (MaVT, TenDangNhap, MatKhauHash, TrangThai)
+        VALUES (@MaVT, @TenDangNhap, @MatKhauHash, @TrangThai);
+        SELECT last_insert_rowid();";
 
-        var normalizedStatus = account.Status.ToString();
+        var normalizedStatus = AccountStatusHelper.NormalizeDatabaseValue(
+            account.Status?.ToString() ?? AppConstants.AccountStatusActive);
+
         var id = DatabaseHelper.ExecuteScalar(
             sql,
             CreateParameter("@MaVT", account.RoleId),
@@ -55,7 +58,14 @@ public class AccountRepository : BaseRepository, IAccountRepository
     // Đổi mật khẩu
     public bool ChangePassword(int accountId, string newPassword)
     {
-        var sql = "UPDATE TaiKhoan SET MatKhauHash = @MatKhauMoi WHERE MaTK = @MaTK;";
+        if (string.IsNullOrWhiteSpace(newPassword))
+            return false;
+
+        var sql = """
+                  UPDATE TaiKhoan
+                  SET MatKhauHash = @MatKhauMoi
+                  WHERE MaTK = @MaTK;
+                  """;
         var result = DatabaseHelper.ExecuteNonQuery(sql,
             CreateParameter("@MatKhauMoi", newPassword),
             CreateParameter("@MaTK", accountId));

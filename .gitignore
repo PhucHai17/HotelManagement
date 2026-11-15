@@ -1,6 +1,7 @@
-﻿# Database
-*.sqlite
-*.sqlite3
+﻿# SQLite Database
+*.db
+*.db-shm
+*.db-wal
 
 # Build
 bin/
