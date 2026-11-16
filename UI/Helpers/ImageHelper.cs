@@ -81,7 +81,6 @@ public static class ImageHelper
                 if (image != null && image.Width > 0 && image.Height > 0)
                 {
                     var srcRect = ComputeCoverSourceRect(image.Size, bounds.Size);
-                    // Dùng TileFlipXY để nội suy bicubic không tạo viền trắng/trong suốt ở cạnh trên và trái
                     using var attrs = new ImageAttributes();
                     attrs.SetWrapMode(WrapMode.TileFlipXY);
                     g.DrawImage(
@@ -164,15 +163,50 @@ public static class ImageHelper
                 using var stream = asm.GetManifestResourceStream(resName);
                 if (stream != null)
                 {
-                    // Tạo bản Bitmap độc lập để đóng Stream ngay, tránh rò rỉ hoặc lỗi GDI+
+
                     using var temp = Image.FromStream(stream);
                     loaded = new Bitmap(temp);
+                }
+            }
+
+            if (loaded == null)
+            {
+                var filePath = FindImageOnDisk(fileName);
+                if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+                {
+                    try
+                    {
+                        using var stream = File.OpenRead(filePath);
+                        using var temp = Image.FromStream(stream);
+                        loaded = new Bitmap(temp);
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Error(ex, $"Không thể đọc ảnh từ đĩa: {filePath}");
+                    }
                 }
             }
 
             Cache[fileName] = loaded;
             return loaded;
         }
+    }
+
+    // Tìm đường dẫn ảnh trên ổ đĩa từ thư mục chạy và thư mục dự án
+    private static string? FindImageOnDisk(string fileName)
+    {
+        if (File.Exists(fileName)) return fileName;
+
+        var dir = AppDomain.CurrentDomain.BaseDirectory;
+        for (var i = 0; i < 5; i++)
+        {
+            var testPath = Path.Combine(dir, "Resources", "Images", fileName);
+            if (File.Exists(testPath)) return testPath;
+            var parent = Directory.GetParent(dir);
+            if (parent == null) break;
+            dir = parent.FullName;
+        }
+        return null;
     }
 
     private static Rectangle ComputeCoverSourceRect(Size imgSize, Size targetSize)
@@ -236,7 +270,7 @@ public static class ImageHelper
 
         protected override void OnPaintBackground(PaintEventArgs e)
         {
-            // Bỏ qua vẽ nền mặc định để tránh nháy hoặc ló viền sáng trước khi OnPaint vẽ ảnh phủ kín
+
         }
 
         protected override void OnPaint(PaintEventArgs e)

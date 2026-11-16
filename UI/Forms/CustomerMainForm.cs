@@ -148,6 +148,7 @@ public class CustomerMainForm : Form
         };
 
         _pnlTimPhong = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+        _pnlTimPhong.Controls.Add(new CustomerSearchRoomTab { Dock = DockStyle.Fill });
         _pnlDatPhongCuaToi = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
         _pnlDichVu = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
         _pnlTaiKhoan = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
