@@ -27,6 +27,7 @@ public class TodoItemDto
 // DTO báo cáo doanh thu
 public class RevenueReportDto
 {
+    public double Revenue { get; set; }
     public string Period { get; set; } = string.Empty;
     public double OccupancyRate { get; set; }
     public int GuestCount { get; set; }
