@@ -7,9 +7,11 @@ namespace UI.Forms;
 public class CustomerMainForm : Form
 {
     private Panel _pnlTimPhong = null!;
-    private Panel _pnlDatPhongCuaToi = null!;
+    private Panel _pnlDatPhong = null!;
     private Panel _pnlDichVu = null!;
     private Panel _pnlTaiKhoan = null!;
+    private CustomerSearchRoomTab _searchRoomTab = null!;
+    private CustomerMyBookingsTab _myBookingsTab = null!;
     private readonly List<Button> _danhSachNutNav = new();
     private readonly Dictionary<string, Panel> _tabPanels = new();
 
@@ -26,7 +28,7 @@ public class CustomerMainForm : Form
         Size = new Size(1180, 720);
         MinimumSize = new Size(1100, 700);
         StartPosition = FormStartPosition.CenterScreen;
-        Font = new Font(AppConstants.FontChuChinh, 10f, FontStyle.Regular);
+        Font = new Font("Times New Roman", 10f, FontStyle.Regular);
         BackColor = AppConstants.MauNenChung;
 
         var pnlTopBar = new Panel
@@ -38,12 +40,18 @@ public class CustomerMainForm : Form
 
         var lblLogo = new HotelProLogo
         {
-            Font = new Font(AppConstants.FontChuChinh, 15.5f, FontStyle.Bold),
-            AutoSize = true,
+            Font = new Font("Times New Roman", 16f, FontStyle.Bold),
+            AutoSize = false,
             Dock = DockStyle.Left,
             TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(14, 0, 10, 0)
+            Padding = new Padding(18, 0, 14, 0),
+            Width = 180
         };
+        var kichThuocLogo = lblLogo.GetPreferredSize(Size.Empty);
+        if (kichThuocLogo.Width > 0)
+        {
+            lblLogo.Width = kichThuocLogo.Width;
+        }
 
         var pnlRightUser = new FlowLayoutPanel
         {
@@ -67,23 +75,24 @@ public class CustomerMainForm : Form
         {
             Text = $"Xin chào, {tenRutGon}",
             ForeColor = Color.White,
-            Font = new Font(AppConstants.FontChuChinh, 9.5f),
+            Font = new Font("Times New Roman", 10f, FontStyle.Regular),
             AutoSize = true,
             TextAlign = ContentAlignment.MiddleRight,
             UseMnemonic = false,
-            Margin = new Padding(0, 8, 12, 0)
+            Margin = new Padding(0, 10, 12, 0)
         };
 
         var toolTip = new ToolTip();
         toolTip.SetToolTip(lblXinChao, $"Xin chào, {tenHienThi}");
 
-        var fontNutDangXuat = new Font(AppConstants.FontChuChinh, 9.5f, FontStyle.Bold);
+        var fontNutDangXuat = new Font("Times New Roman", 10f, FontStyle.Bold);
         var rongNutDangXuat = Math.Max(108, TextRenderer.MeasureText("Đăng xuất", fontNutDangXuat).Width + 28);
         var btnDangXuat = new Button
         {
             Text = "Đăng xuất",
             AutoSize = false,
             Size = new Size(rongNutDangXuat, 36),
+            Margin = new Padding(0),
             UseMnemonic = false,
             Font = fontNutDangXuat,
             FlatStyle = FlatStyle.Flat,
@@ -110,7 +119,7 @@ public class CustomerMainForm : Form
             Padding = new Padding(4, 12, 8, 0)
         };
 
-        string[] cacTab = { "Tìm phòng", "Đặt phòng của tôi", "Dịch vụ", "Tài khoản" };
+        string[] cacTab = { "Tìm phòng", "Đặt phòng", "Dịch vụ", "Tài khoản" };
         foreach (var tab in cacTab)
         {
             var btn = new Button
@@ -125,7 +134,7 @@ public class CustomerMainForm : Form
                 FlatStyle = FlatStyle.Flat,
                 ForeColor = Color.White,
                 BackColor = AppConstants.MauXanhNavy,
-                Font = new Font(AppConstants.FontChuChinh, 10f, FontStyle.Bold),
+                Font = new Font("Times New Roman", 10.5f, FontStyle.Bold),
                 UseMnemonic = false,
                 Cursor = Cursors.Hand
             };
@@ -148,18 +157,24 @@ public class CustomerMainForm : Form
         };
 
         _pnlTimPhong = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
-        _pnlTimPhong.Controls.Add(new CustomerSearchRoomTab { Dock = DockStyle.Fill });
-        _pnlDatPhongCuaToi = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+        _searchRoomTab = new CustomerSearchRoomTab { Dock = DockStyle.Fill };
+        _searchRoomTab.OnBookingCreated += () => XuLyChuyenTab("Đặt phòng");
+        _pnlTimPhong.Controls.Add(_searchRoomTab);
+
+        _pnlDatPhong = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+        _myBookingsTab = new CustomerMyBookingsTab { Dock = DockStyle.Fill };
+        _pnlDatPhong.Controls.Add(_myBookingsTab);
+
         _pnlDichVu = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
         _pnlTaiKhoan = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
 
         _tabPanels["Tìm phòng"] = _pnlTimPhong;
-        _tabPanels["Đặt phòng của tôi"] = _pnlDatPhongCuaToi;
+        _tabPanels["Đặt phòng"] = _pnlDatPhong;
         _tabPanels["Dịch vụ"] = _pnlDichVu;
         _tabPanels["Tài khoản"] = _pnlTaiKhoan;
 
         pnlMainContent.Controls.Add(_pnlTimPhong);
-        pnlMainContent.Controls.Add(_pnlDatPhongCuaToi);
+        pnlMainContent.Controls.Add(_pnlDatPhong);
         pnlMainContent.Controls.Add(_pnlDichVu);
         pnlMainContent.Controls.Add(_pnlTaiKhoan);
 
@@ -169,7 +184,7 @@ public class CustomerMainForm : Form
         pnlMainContent.BringToFront();
     }
 
-    // Chuyển đổi tab hiển thị
+    // Chuyển đổi tab hiển thị trên giao diện
     private void XuLyChuyenTab(string tenTab)
     {
         foreach (var (tab, panel) in _tabPanels)
@@ -185,6 +200,15 @@ public class CustomerMainForm : Form
         foreach (var btn in _danhSachNutNav)
         {
             btn.ForeColor = (btn.Text == tenTab) ? AppConstants.MauVangCam : Color.White;
+        }
+
+        if (tenTab == "Đặt phòng")
+        {
+            _myBookingsTab.TaiDuLieuDatPhong();
+        }
+        else if (tenTab == "Tìm phòng")
+        {
+            _searchRoomTab.TaiDanhSachPhongTrong();
         }
     }
 }

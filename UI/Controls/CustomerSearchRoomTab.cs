@@ -2,6 +2,7 @@ using BLL;
 using Common.Constants;
 using Common.Helpers;
 using Entity.Entities;
+using Entity.Enums;
 using UI.Helpers;
 
 namespace UI.Controls;
@@ -28,8 +29,11 @@ public class CustomerSearchRoomTab : UserControl
     private CheckBox chkDatPhongDuaDon = null!;
     private RoomType? _loaiPhongDangChon;
 
+    public event Action? OnBookingCreated;
+
     public CustomerSearchRoomTab()
     {
+        Font = new Font("Times New Roman", 10f, FontStyle.Regular);
         KhoiTaoGiaoDien();
         TaiDanhSachPhongTrong();
     }
@@ -77,7 +81,7 @@ public class CustomerSearchRoomTab : UserControl
             Text = "Ngày nhận phòng",
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.BottomLeft,
-            Font = new Font(AppConstants.FontChuChinh, 9.5f),
+            Font = new Font("Times New Roman", 9.5f, FontStyle.Regular),
             ForeColor = Color.FromArgb(71, 85, 105),
             Margin = new Padding(0, 0, 12, 4)
         };
@@ -85,6 +89,7 @@ public class CustomerSearchRoomTab : UserControl
         {
             Dock = DockStyle.Top,
             Height = 30,
+            Font = new Font("Times New Roman", 10f, FontStyle.Regular),
             Format = DateTimePickerFormat.Custom,
             CustomFormat = "dd/MM/yyyy",
             Margin = new Padding(0, 2, 12, 0)
@@ -96,7 +101,7 @@ public class CustomerSearchRoomTab : UserControl
             Text = "Ngày trả phòng",
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.BottomLeft,
-            Font = new Font(AppConstants.FontChuChinh, 9.5f),
+            Font = new Font("Times New Roman", 9.5f, FontStyle.Regular),
             ForeColor = Color.FromArgb(71, 85, 105),
             Margin = new Padding(0, 0, 12, 4)
         };
@@ -104,6 +109,7 @@ public class CustomerSearchRoomTab : UserControl
         {
             Dock = DockStyle.Top,
             Height = 30,
+            Font = new Font("Times New Roman", 10f, FontStyle.Regular),
             Format = DateTimePickerFormat.Custom,
             CustomFormat = "dd/MM/yyyy",
             Value = DateTime.Today.AddDays(1),
@@ -116,7 +122,7 @@ public class CustomerSearchRoomTab : UserControl
             Text = "Số khách",
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.BottomLeft,
-            Font = new Font(AppConstants.FontChuChinh, 9.5f),
+            Font = new Font("Times New Roman", 9.5f, FontStyle.Regular),
             ForeColor = Color.FromArgb(71, 85, 105),
             Margin = new Padding(0, 0, 12, 4)
         };
@@ -124,6 +130,7 @@ public class CustomerSearchRoomTab : UserControl
         {
             Dock = DockStyle.Top,
             Height = 30,
+            Font = new Font("Times New Roman", 10f, FontStyle.Regular),
             DropDownStyle = ComboBoxStyle.DropDownList,
             Margin = new Padding(0, 2, 12, 0)
         };
@@ -135,7 +142,7 @@ public class CustomerSearchRoomTab : UserControl
             Text = "Loại phòng",
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.BottomLeft,
-            Font = new Font(AppConstants.FontChuChinh, 9.5f),
+            Font = new Font("Times New Roman", 9.5f, FontStyle.Regular),
             ForeColor = Color.FromArgb(71, 85, 105),
             Margin = new Padding(0, 0, 12, 4)
         };
@@ -143,6 +150,7 @@ public class CustomerSearchRoomTab : UserControl
         {
             Dock = DockStyle.Top,
             Height = 30,
+            Font = new Font("Times New Roman", 10f, FontStyle.Regular),
             DropDownStyle = ComboBoxStyle.DropDownList,
             Margin = new Padding(0, 2, 12, 0)
         };
@@ -154,6 +162,7 @@ public class CustomerSearchRoomTab : UserControl
             Text = "Tìm phòng",
             Dock = DockStyle.Top,
             Height = 34,
+            Font = new Font("Times New Roman", 10f, FontStyle.Bold),
             Margin = new Padding(0, 1, 0, 0)
         };
         UIHelper.DinhDangNutBamChinh(btnTim);
@@ -204,7 +213,7 @@ public class CustomerSearchRoomTab : UserControl
         var lblTitleLeft = new Label
         {
             Text = "Phòng còn trống",
-            Font = new Font(AppConstants.FontChuChinh, 13f, FontStyle.Bold),
+            Font = new Font("Times New Roman", 12f, FontStyle.Bold),
             ForeColor = AppConstants.MauXanhNavy,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft
@@ -233,7 +242,7 @@ public class CustomerSearchRoomTab : UserControl
         var lblTitleTT = new Label
         {
             Text = "Thông tin đặt phòng",
-            Font = new Font(AppConstants.FontChuChinh, 13f, FontStyle.Bold),
+            Font = new Font("Times New Roman", 12f, FontStyle.Bold),
             ForeColor = AppConstants.MauXanhNavy,
             Dock = DockStyle.Top,
             Height = 34
@@ -267,14 +276,14 @@ public class CustomerSearchRoomTab : UserControl
         pnlTomTatBody.Controls.Add(pnlKeNgang);
 
         TaoDongTomTatDat(pnlTomTatBody, "Tổng cộng:", "0 đ", out lblDatPhongTongTien, true);
-        lblDatPhongTongTien.Font = new Font(AppConstants.FontChuChinh, 13f, FontStyle.Bold);
+        lblDatPhongTongTien.Font = new Font("Times New Roman", 12f, FontStyle.Bold);
         lblDatPhongTongTien.ForeColor = AppConstants.MauVangCamDam;
 
         var lblDVThem = new Label
         {
             Text = "Dịch vụ thêm:",
             AutoSize = true,
-            Font = new Font(AppConstants.FontChuChinh, 10f, FontStyle.Bold),
+            Font = new Font("Times New Roman", 10f, FontStyle.Bold),
             ForeColor = AppConstants.MauChuChinh,
             Margin = new Padding(0, 12, 0, 4)
         };
@@ -282,7 +291,7 @@ public class CustomerSearchRoomTab : UserControl
         {
             Text = "Ăn sáng buffet (+50.000 đ/đêm)",
             AutoSize = true,
-            Font = new Font(AppConstants.FontChuChinh, 10f),
+            Font = new Font("Times New Roman", 10f, FontStyle.Regular),
             ForeColor = AppConstants.MauChuChinh,
             Margin = new Padding(0, 2, 0, 4)
         };
@@ -290,7 +299,7 @@ public class CustomerSearchRoomTab : UserControl
         {
             Text = "Đưa đón sân bay (+200.000 đ)",
             AutoSize = true,
-            Font = new Font(AppConstants.FontChuChinh, 10f),
+            Font = new Font("Times New Roman", 10f, FontStyle.Regular),
             ForeColor = AppConstants.MauChuChinh,
             Margin = new Padding(0, 2, 0, 4)
         };
@@ -315,7 +324,8 @@ public class CustomerSearchRoomTab : UserControl
         {
             Text = "Xác nhận đặt phòng",
             Dock = DockStyle.Bottom,
-            Height = 40
+            Height = 40,
+            Font = new Font("Times New Roman", 10.5f, FontStyle.Bold)
         };
         UIHelper.DinhDangNutBamVoHieu(btnXacNhanDatPhong);
         btnXacNhanDatPhong.Click += (s, e) => XuLyXacNhanDatPhong();
@@ -340,7 +350,7 @@ public class CustomerSearchRoomTab : UserControl
     {
         var row = new Panel
         {
-            Height = laTongCong ? 32 : 26,
+            Height = laTongCong ? 32 : 28,
             BackColor = Color.White,
             Margin = new Padding(0, 0, 0, 4)
         };
@@ -352,7 +362,7 @@ public class CustomerSearchRoomTab : UserControl
             AutoSize = true,
             TextAlign = ContentAlignment.MiddleLeft,
             ForeColor = laTongCong ? AppConstants.MauChuChinh : AppConstants.MauChuPhu,
-            Font = new Font(AppConstants.FontChuChinh, laTongCong ? 11f : 9.5f,
+            Font = new Font("Times New Roman", laTongCong ? 11f : 9.5f,
                 laTongCong ? FontStyle.Bold : FontStyle.Regular)
         };
 
@@ -363,7 +373,7 @@ public class CustomerSearchRoomTab : UserControl
             AutoSize = true,
             TextAlign = ContentAlignment.MiddleRight,
             ForeColor = AppConstants.MauChuChinh,
-            Font = new Font(AppConstants.FontChuChinh, laTongCong ? 12f : 9.5f, FontStyle.Bold)
+            Font = new Font("Times New Roman", laTongCong ? 12f : 9.5f, FontStyle.Bold)
         };
 
         row.Controls.Add(lblGiaTri);
@@ -373,7 +383,7 @@ public class CustomerSearchRoomTab : UserControl
     }
 
     // Tải danh sách các loại phòng trống hiển thị lên thẻ
-    private void TaiDanhSachPhongTrong()
+    public void TaiDanhSachPhongTrong()
     {
         UIHelper.RunSafe(() =>
         {
@@ -421,7 +431,7 @@ public class CustomerSearchRoomTab : UserControl
         var lblTen = new Label
         {
             Text = lp.Name,
-            Font = new Font(AppConstants.FontChuChinh, 12.5f, FontStyle.Bold),
+            Font = new Font("Times New Roman", 12f, FontStyle.Bold),
             ForeColor = AppConstants.MauChuChinh,
             Location = new Point(14, 135),
             AutoSize = true
@@ -430,6 +440,7 @@ public class CustomerSearchRoomTab : UserControl
         var lblMoTa = new Label
         {
             Text = lp.Description,
+            Font = new Font("Times New Roman", 9.5f, FontStyle.Regular),
             ForeColor = AppConstants.MauChuPhu,
             Location = new Point(14, 162),
             Size = new Size(225, 44),
@@ -439,7 +450,7 @@ public class CustomerSearchRoomTab : UserControl
         var lblGia = new Label
         {
             Text = $"{FormatHelper.FormatCurrency(lp.BasePrice)}/đêm",
-            Font = new Font(AppConstants.FontChuChinh, 11f, FontStyle.Bold),
+            Font = new Font("Times New Roman", 10.5f, FontStyle.Bold),
             ForeColor = AppConstants.MauVangCamDam,
             Location = new Point(14, 212),
             AutoSize = true
@@ -448,6 +459,7 @@ public class CustomerSearchRoomTab : UserControl
         var btnChon = new Button
         {
             Text = "Chọn phòng",
+            Font = new Font("Times New Roman", 10f, FontStyle.Bold),
             Location = new Point(14, 248),
             Width = 225,
             Height = 38
@@ -509,7 +521,7 @@ public class CustomerSearchRoomTab : UserControl
         UIHelper.DinhDangNutBamNavy(btnXacNhanDatPhong);
     }
 
-    // Xử lý xác nhận đặt phòng
+    // Xử lý xác nhận đặt phòng trực tuyến
     private void XuLyXacNhanDatPhong()
     {
         if (_loaiPhongDangChon == null)
@@ -526,7 +538,49 @@ public class CustomerSearchRoomTab : UserControl
             return;
         }
 
-        MessageBox.Show(this, "Chức năng đặt phòng trực tuyến sẽ được kích hoạt ở bước tiếp theo.", "Thông báo",
-            MessageBoxButtons.OK, MessageBoxIcon.Information);
+        var khach = SessionManager.CurrentCustomer;
+        if (khach == null || khach.CustomerId <= 0)
+        {
+            MessageBox.Show(this, "Phiên đăng nhập khách hàng không hợp lệ. Vui lòng đăng nhập lại!", "Lỗi",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        UIHelper.RunSafe(() =>
+        {
+            var dsPhongTrong = AppServices.Room.GetAvailableRooms(_loaiPhongDangChon.RoomTypeId);
+            if (dsPhongTrong.Count == 0)
+            {
+                MessageBox.Show(this, $"Rất tiếc, hiện tại loại phòng {_loaiPhongDangChon.Name} đã hết phòng trống!",
+                    "Hết phòng", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var dp = new Booking
+            {
+                CustomerId = khach.CustomerId,
+                CheckInDate = dtpTimNgayNhan.Value.ToString("dd/MM/yyyy"),
+                CheckOutDate = dtpTimNgayTra.Value.ToString("dd/MM/yyyy"),
+                GuestCount = cboTimSoKhach.SelectedIndex + 1,
+                Deposit = 0,
+                Channel = "Trực tuyến",
+                Status = BookingStatus.Pending
+            };
+
+            var maPhong = dsPhongTrong[0].RoomId;
+            var thanhCong = AppServices.Booking.CreateBooking(dp, maPhong, _loaiPhongDangChon.BasePrice, out var msg);
+
+            if (thanhCong)
+            {
+                MessageBox.Show(this, "Đặt phòng thành công! Đơn đặt của bạn đã được gửi tới lễ tân xác nhận.",
+                    "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                TaiDanhSachPhongTrong();
+                OnBookingCreated?.Invoke();
+            }
+            else
+            {
+                MessageBox.Show(this, msg, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }, "xác nhận đặt phòng trực tuyến", this);
     }
 }
