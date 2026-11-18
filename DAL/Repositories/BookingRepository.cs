@@ -23,6 +23,7 @@ public class BookingRepository : BaseRepository, IBookingRepository
         return list;
     }
 
+    // Tìm kiếm đơn đặt phòng theo từ khóa, trạng thái và ngày nhận
     public List<Booking> Search(string keyword, string status, string fromDate)
     {
         var sql = @"
@@ -40,7 +41,7 @@ public class BookingRepository : BaseRepository, IBookingRepository
 
         if (!string.IsNullOrWhiteSpace(keyword))
         {
-            sql += " AND (kh.HoTen LIKE @TuKhoa OR ('DP' || SUBSTR('000' || dp.MaDP, -3)) LIKE @TuKhoa OR p.SoPhong LIKE @TuKhoa OR kh.CCCD LIKE @TuKhoa) ";
+            sql += " AND (kh.HoTen LIKE @TuKhoa OR ('DP' || SUBSTR('000' || dp.MaDP, -3)) LIKE @TuKhoa OR p.SoPhong LIKE @TuKhoa OR kh.CCCD LIKE @TuKhoa OR kh.SDT LIKE @TuKhoa) ";
             parameters.Add(CreateParameter("@TuKhoa", $"%{keyword}%"));
         }
 
@@ -50,17 +51,18 @@ public class BookingRepository : BaseRepository, IBookingRepository
             parameters.Add(CreateParameter("@TrangThai", status));
         }
 
-        if (!string.IsNullOrWhiteSpace(fromDate))
-        {
-            sql += " AND dp.NgayNhan >= @TuNgay ";
-            parameters.Add(CreateParameter("@TuNgay", fromDate));
-        }
-
         sql += " ORDER BY dp.MaDP DESC;";
 
         var table = DatabaseHelper.ExecuteDataTable(sql, parameters.ToArray());
+        var hasFromDate = FormatHelper.TryParseDate(fromDate, out var minDate);
         var list = new List<Booking>();
-        foreach (DataRow r in table.Rows) list.Add(MapToBooking(r));
+        foreach (DataRow r in table.Rows)
+        {
+            var booking = MapToBooking(r);
+            if (hasFromDate && (!FormatHelper.TryParseDate(booking.CheckInDate, out var checkIn) || checkIn.Date < minDate.Date))
+                continue;
+            list.Add(booking);
+        }
         return list;
     }
 

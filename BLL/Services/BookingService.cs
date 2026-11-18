@@ -19,17 +19,32 @@ public class BookingService : IBookingService
 
     public List<Booking> GetAll()
     {
+        SessionManager.EnsureAnyPermission(
+            "Bạn không có quyền xem toàn bộ danh sách đặt phòng!",
+            AppConstants.QuyenQuanLyDatPhong);
         return _bookingRepo.GetAll();
     }
 
     public List<Booking> Search(string keyword, string status, string fromDate)
     {
+        SessionManager.EnsureAnyPermission(
+            "Bạn không có quyền tìm kiếm đặt phòng!",
+            AppConstants.QuyenQuanLyDatPhong);
         return _bookingRepo.Search(keyword, status, fromDate);
     }
 
     public Booking? GetById(int bookingId)
     {
-        return _bookingRepo.GetById(bookingId);
+        SessionManager.EnsureAnyPermission(
+            "Bạn không có quyền xem chi tiết đặt phòng!",
+            AppConstants.QuyenQuanLyDatPhong,
+            AppConstants.QuyenDatPhongOnline);
+
+        var booking = _bookingRepo.GetById(bookingId);
+        if (booking != null && !SessionManager.HasStaffOrOwnerAccess(booking.CustomerId, AppConstants.QuyenQuanLyDatPhong))
+            throw new UnauthorizedAccessException("Bạn chỉ có quyền xem đơn đặt phòng của chính mình!");
+
+        return booking;
     }
 
     public List<Booking> GetByCustomerId(int customerId)
@@ -46,15 +61,22 @@ public class BookingService : IBookingService
 
     public List<Booking> GetPendingCheckIns()
     {
+        SessionManager.EnsureAnyPermission(
+            "Bạn không có quyền xem danh sách chờ check-in!",
+            AppConstants.QuyenQuanLyDatPhong);
         return _bookingRepo.GetPendingCheckIns();
     }
 
     public Booking? GetActiveBookingByRoomNumber(string roomNumber)
     {
+        SessionManager.EnsureAnyPermission(
+            "Bạn không có quyền xem thông tin phòng đang lưu trú!",
+            AppConstants.QuyenQuanLyDatPhong,
+            AppConstants.QuyenQuanLyPhong);
         return _bookingRepo.GetActiveBookingByRoomNumber(roomNumber);
     }
 
-    // Tạo đơn đặt phòng trực tuyến có kiểm tra hợp lệ
+    // Tạo đơn đặt phòng có kiểm tra quyền và dữ liệu hợp lệ
     public bool CreateBooking(Booking booking, int roomId, double priceAtBooking, out string message)
     {
         if (booking == null)
@@ -111,9 +133,19 @@ public class BookingService : IBookingService
             return false;
         }
 
-        booking.Status = BookingStatus.Pending;
-        if (string.IsNullOrWhiteSpace(booking.Channel))
-            booking.Channel = "Trực tuyến";
+        if (hasStaffAccess)
+        {
+            if (booking.Status != BookingStatus.Pending && booking.Status != BookingStatus.Confirmed)
+                booking.Status = BookingStatus.Confirmed;
+            if (string.IsNullOrWhiteSpace(booking.Channel))
+                booking.Channel = "Trực tiếp";
+        }
+        else
+        {
+            booking.Status = BookingStatus.Pending;
+            if (string.IsNullOrWhiteSpace(booking.Channel))
+                booking.Channel = "Trực tuyến";
+        }
 
         var bookingId = _bookingRepo.CreateBooking(booking, roomId, priceAtBooking);
         if (bookingId > 0)
@@ -124,6 +156,45 @@ public class BookingService : IBookingService
         }
 
         message = "Đặt phòng thất bại, vui lòng kiểm tra lại!";
+        return false;
+    }
+
+    // Duyệt đơn đặt phòng đang chờ duyệt sang trạng thái đã xác nhận
+    public bool ConfirmBooking(int bookingId, out string message)
+    {
+        if (!SessionManager.CheckPermission(
+                out message,
+                "Bạn không có quyền duyệt đơn đặt phòng!",
+                AppConstants.QuyenQuanLyDatPhong))
+            return false;
+
+        if (bookingId <= 0)
+        {
+            message = "Mã đơn đặt phòng không hợp lệ!";
+            return false;
+        }
+
+        var booking = _bookingRepo.GetById(bookingId);
+        if (booking == null)
+        {
+            message = "Không tìm thấy đơn đặt phòng!";
+            return false;
+        }
+
+        if (booking.Status != BookingStatus.Pending)
+        {
+            message = "Chỉ có thể duyệt đơn đặt phòng đang ở trạng thái Chờ duyệt!";
+            return false;
+        }
+
+        var result = _bookingRepo.UpdateStatus(bookingId, AppConstants.DPDaXacNhan);
+        if (result)
+        {
+            message = $"Đã duyệt đơn đặt phòng DP{bookingId:D3}!";
+            return true;
+        }
+
+        message = "Không thể duyệt đơn đặt phòng!";
         return false;
     }
 
@@ -153,7 +224,19 @@ public class BookingService : IBookingService
             return false;
         }
 
-        if (booking.Status != BookingStatus.Pending)
+        if (booking.Status == BookingStatus.Cancelled)
+        {
+            message = "Đơn đặt phòng này đã bị hủy trước đó!";
+            return false;
+        }
+
+        if (booking.Status == BookingStatus.CheckedIn || booking.Status == BookingStatus.CheckedOut)
+        {
+            message = "Phòng đã nhận hoặc đã hoàn tất, không thể hủy!";
+            return false;
+        }
+
+        if (!hasStaffAccess && booking.Status != BookingStatus.Pending)
         {
             message = "Chỉ có thể hủy đơn đặt phòng đang ở trạng thái Chờ duyệt!";
             return false;
