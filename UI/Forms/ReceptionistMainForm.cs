@@ -7,35 +7,36 @@ using UI.Controls;
 
 namespace UI.Forms;
 
-// Giao diện chính của Lễ tân 
+// Giao diện chính của Lễ tân
 [DesignerCategory("Code")]
 public partial class ReceptionistMainForm : Form
 {
     private readonly IReportService _baoCaoBLL = AppServices.Report;
-    protected readonly List<Button> _danhSachNutMenu = new();
+    private readonly IBookingService _datPhongBLL = AppServices.Booking;
     private readonly IHotelService _dichVuBLL = AppServices.Hotel;
     private readonly IInvoiceService _hoaDonBLL = AppServices.Invoice;
     private readonly ICustomerService _khachHangBLL = AppServices.Customer;
     private readonly IRoomService _phongBLL = AppServices.Room;
+
+    protected readonly List<Button> _danhSachNutMenu = new();
     private readonly ToolTip _toolTip = new();
     private BookingTab _bookingTab = null!;
     protected Label lblTenNhanVien = null!;
-    private Panel? pnlBaoCao;
-    private Panel pnlCheckInOut = null!;
-    private Panel pnlDatPhong = null!;
-    private Panel pnlDichVu = null!;
-    private Panel pnlHoaDon = null!;
-    private Panel pnlKhachHang = null!;
-    protected Panel pnlMainContent = null!;
-
-    protected FlowLayoutPanel pnlMenuFlow = null!;
 
     // Thanh điều hướng
     protected Panel pnlSidebar = null!;
-    private Panel pnlSoDoPhong = null!;
+    protected Panel pnlMainContent = null!;
+    protected FlowLayoutPanel pnlMenuFlow = null!;
 
     // Các tab chức năng chính
     private Panel pnlTongQuan = null!;
+    private Panel pnlSoDoPhong = null!;
+    private Panel pnlDatPhong = null!;
+    private Panel pnlCheckInOut = null!;
+    private Panel pnlKhachHang = null!;
+    private Panel pnlDichVu = null!;
+    private Panel pnlHoaDon = null!;
+    private Panel? pnlBaoCao;
 
     public ReceptionistMainForm()
     {
@@ -43,6 +44,7 @@ public partial class ReceptionistMainForm : Form
         KhoiTaoCacTabNoiDung();
         ChuyenTab(pnlTongQuan, "Tổng quan");
         UIHelper.ApDungFontTimesNewRoman(this);
+        TaiDuLieuTongQuan();
         Load += (s, e) => TaiDuLieuTongQuan();
     }
 
@@ -52,21 +54,13 @@ public partial class ReceptionistMainForm : Form
         base.Dispose(disposing);
     }
 
+    // Cho phép lớp con tùy biến tiêu đề form
+    protected virtual string LayTieuDeForm() => "Giao diện Lễ tân";
 
-    protected virtual string LayTieuDeForm()
-    {
-        return "Giao diện Lễ tân";
-    }
+    // Cho phép lớp con tùy biến nhãn vai trò ở góc dưới sidebar
+    protected virtual string LayNhanVaiTroSidebar() => "Lễ tân";
 
-    protected virtual string LayNhanVaiTroSidebar()
-    {
-        return "Lễ tân";
-    }
-
-    protected virtual bool XuLyChuyenMenuMoRong(string tenChucNang)
-    {
-        return false;
-    }
+    protected virtual bool XuLyChuyenMenuMoRong(string tenChucNang) => false;
 
     protected Button TaoNutSidebar(string tenCN)
     {
@@ -102,7 +96,7 @@ public partial class ReceptionistMainForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Color.FromArgb(243, 244, 246);
 
-        // 1.Menu
+        // 1. Menu dọc bên trái
         pnlSidebar = new Panel
         {
             Dock = DockStyle.Left,
@@ -140,7 +134,7 @@ public partial class ReceptionistMainForm : Form
         pnlLogo.Controls.Add(lblLogo);
         tblSidebar.Controls.Add(pnlLogo, 0, 0);
 
-        // Hàng 1: Danh sách menu
+        // Hàng 1: Danh sách menu theo quyền
         pnlMenuFlow = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -156,11 +150,15 @@ public partial class ReceptionistMainForm : Form
         {
             "Tổng quan", "Sơ đồ phòng", "Đặt phòng", "Check-in / Check-out", "Khách hàng", "Dịch vụ", "Hóa đơn"
         };
-        if (SessionManager.HasPermission(AppConstants.QuyenXemBaoCao)) cacChucNang.Add("Báo cáo");
+        if (SessionManager.HasPermission(AppConstants.QuyenXemBaoCao))
+        {
+            cacChucNang.Add("Báo cáo");
+        }
 
         foreach (var tenCN in cacChucNang) TaoNutSidebar(tenCN);
         tblSidebar.Controls.Add(pnlMenuFlow, 0, 1);
 
+        // Hàng 2: Vai trò, họ tên nhân viên và nút Đăng xuất
         var pnlBottomUser = new Panel
         {
             Dock = DockStyle.Fill,
@@ -246,6 +244,8 @@ public partial class ReceptionistMainForm : Form
         tblSidebar.Controls.Add(pnlBottomUser, 0, 2);
 
         pnlSidebar.Controls.Add(tblSidebar);
+
+        // 2. Vùng nội dung chính bên phải
         pnlMainContent = new Panel
         {
             Dock = DockStyle.Fill,
@@ -265,9 +265,18 @@ public partial class ReceptionistMainForm : Form
                 ChuyenTab(pnlTongQuan, tenChucNang);
                 TaiDuLieuTongQuan();
                 break;
+            case "Sơ đồ phòng":
+                ChuyenTab(pnlSoDoPhong, tenChucNang);
+                TaiDuLieuSoDoPhong();
+                break;
             case "Đặt phòng":
                 ChuyenTab(pnlDatPhong, tenChucNang);
                 _bookingTab.TaiDuLieuDatPhong();
+                break;
+            case "Check-in / Check-out":
+            case "Check-in/Check-out":
+                ChuyenTab(pnlCheckInOut, "Check-in / Check-out");
+                TaiDuLieuCheckInOut();
                 break;
             default:
                 XuLyChuyenMenuMoRong(tenChucNang);
@@ -282,6 +291,7 @@ public partial class ReceptionistMainForm : Form
         tabCanHien.BringToFront();
 
         foreach (var btn in _danhSachNutMenu)
+        {
             if (btn.Text.Trim() == tenChucNang)
             {
                 btn.BackColor = AppConstants.MauVangCam;
@@ -294,6 +304,7 @@ public partial class ReceptionistMainForm : Form
                 btn.ForeColor = Color.FromArgb(203, 213, 225);
                 btn.Font = new Font(AppConstants.FontChuChinh, 10.5f, FontStyle.Regular);
             }
+        }
     }
 
     private void KhoiTaoCacTabNoiDung()
@@ -302,9 +313,17 @@ public partial class ReceptionistMainForm : Form
         KhoiTaoTabTongQuan();
         pnlMainContent.Controls.Add(pnlTongQuan);
 
+        pnlSoDoPhong = new Panel { Dock = DockStyle.Fill };
+        KhoiTaoTabSoDoPhong();
+        pnlMainContent.Controls.Add(pnlSoDoPhong);
+
         pnlDatPhong = new Panel { Dock = DockStyle.Fill };
         _bookingTab = new BookingTab { Dock = DockStyle.Fill };
         pnlDatPhong.Controls.Add(_bookingTab);
         pnlMainContent.Controls.Add(pnlDatPhong);
+
+        pnlCheckInOut = new Panel { Dock = DockStyle.Fill };
+        KhoiTaoTabCheckInOut();
+        pnlMainContent.Controls.Add(pnlCheckInOut);
     }
 }

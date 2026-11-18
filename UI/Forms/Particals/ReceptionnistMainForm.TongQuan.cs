@@ -166,7 +166,10 @@ public partial class ReceptionistMainForm
 
                 var dict7 = _baoCaoBLL.Get7DayOccupancyRate();
                 bieuDo7Ngay.UpdateData(dict7);
-
+                bieuDo7Ngay.Invalidate();
+                double congSuat = tk.OccupancyRate > 0
+                    ? tk.OccupancyRate
+                    : (tk.TotalRooms > 0 ? tk.OccupiedRooms * 100.0 / tk.TotalRooms : 0);
                 dgvViecCanLam.Rows.Clear();
                 var dsViec = _baoCaoBLL.GetTodayTodoList();
                 foreach (var v in dsViec)

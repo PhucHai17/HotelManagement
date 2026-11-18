@@ -11,4 +11,7 @@ public interface IBookingService
     bool CreateBooking(Booking booking, int roomId, double priceAtBooking, out string message);
     bool ConfirmBooking(int bookingId, out string message);
     bool CancelBooking(int bookingId, out string message);
+    bool CheckIn(int bookingId, string identityCard, out string message);
+    bool CheckOutAndPay(int bookingId, string paymentMethod, out string message);
+    (double roomTotal, double serviceTotal, double discount, double vat, double finalTotal, int nights) CalculateCheckOutBilling(int bookingId);
 }

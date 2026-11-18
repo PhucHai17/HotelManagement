@@ -14,7 +14,8 @@ public class DBConnection
         {
             DataSource = DatabasePath,
             Mode = SqliteOpenMode.ReadWrite,
-            ForeignKeys = true
+            ForeignKeys = true,
+            Pooling = false
         }.ToString();
 
     public static void EnsureDatabaseExists()

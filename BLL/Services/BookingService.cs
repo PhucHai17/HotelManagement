@@ -6,15 +6,20 @@ public class BookingService : IBookingService
 {
     private readonly IBookingRepository _bookingRepo;
     private readonly IRoomRepository _roomRepo;
+    private IBookingService _bookingServiceImplementation;
+    private readonly IInvoiceRepository _invoiceRepo;
+    private readonly IServiceRepository _serviceRepo;
 
-    public BookingService() : this(new BookingRepository(), new RoomRepository())
+    public BookingService() : this(new BookingRepository(), new RoomRepository() , new InvoiceRepository(), new ServiceRepository())
     {
     }
 
-    public BookingService(IBookingRepository bookingRepo, IRoomRepository roomRepo)
+    public BookingService(IBookingRepository bookingRepo, IRoomRepository roomRepo , IInvoiceRepository invoiceRepo,IServiceRepository serviceRepo)
     {
         _bookingRepo = bookingRepo ?? throw new ArgumentNullException(nameof(bookingRepo));
         _roomRepo = roomRepo ?? throw new ArgumentNullException(nameof(roomRepo));
+        _invoiceRepo = invoiceRepo ?? throw new ArgumentNullException(nameof(invoiceRepo));
+        _serviceRepo = serviceRepo ?? throw new ArgumentNullException(nameof(serviceRepo));
     }
 
     public List<Booking> GetAll()
@@ -256,5 +261,142 @@ public class BookingService : IBookingService
 
         message = "Không thể hủy đơn đặt phòng!";
         return false;
+    }
+
+    public bool CheckIn(int bookingId, string identityCard, out string message)
+    {
+        if (!SessionManager.CheckPermission(
+                out message,
+                "Bạn không có quyền thực hiện Check-in!",
+                AppConstants.QuyenQuanLyDatPhong))
+        {
+            return false;
+        }
+
+        var booking = _bookingRepo.GetById(bookingId);
+        if (booking == null)
+        {
+            message = "Không tìm thấy thông tin đơn đặt phòng!";
+            return false;
+        }
+
+        if (booking.Status == BookingStatus.CheckedIn)
+        {
+            message = "Đơn đặt phòng này đã nhận phòng trước đó!";
+            return false;
+        }
+
+        if (booking.Status == BookingStatus.Cancelled)
+        {
+            message = "Đơn đặt phòng này đã bị hủy, không thể nhận phòng!";
+            return false;
+        }
+
+        var actualCheckIn = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+        var result = _bookingRepo.CheckIn(bookingId, identityCard, actualCheckIn);
+        if (result)
+        {
+            message = $"Check-in thành công cho khách {booking.CustomerName} - Phòng {booking.RoomNumber}!";
+            return true;
+        }
+
+        message = "Thực hiện Check-in thất bại!";
+        return false;
+    }
+
+    public bool CheckOutAndPay(int bookingId, string paymentMethod, out string message)
+    {
+        if (!SessionManager.CheckPermission(
+                out message,
+                "Bạn không có quyền thực hiện Check-out và thanh toán!",
+                AppConstants.QuyenQuanLyDatPhong))
+        {
+            return false;
+        }
+
+        var booking = _bookingRepo.GetById(bookingId);
+        if (booking == null)
+        {
+            message = "Không tìm thấy thông tin đơn đặt phòng!";
+            return false;
+        }
+
+        if (SessionManager.CurrentEmployee == null || SessionManager.CurrentEmployee.EmployeeId <= 0)
+        {
+            message = "Phiên làm việc nhân viên không hợp lệ, vui lòng đăng nhập lại!";
+            return false;
+        }
+
+        var (roomTotal, serviceTotal, discount, vat, finalTotal, _) = CalculateCheckOutBilling(bookingId);
+
+        var invoice = new Invoice
+        {
+            BookingId = bookingId,
+            EmployeeId = SessionManager.CurrentEmployee.EmployeeId,
+            RoomCharge = roomTotal,
+            ServiceCharge = serviceTotal,
+            Discount = discount,
+            VatAmount = vat,
+            TotalAmount = finalTotal,
+            Status = InvoiceStatus.Paid
+        };
+
+        var invoiceId = _invoiceRepo.CreateInvoice(invoice);
+        if (invoiceId > 0)
+        {
+            _invoiceRepo.PayInvoice(invoiceId, paymentMethod);
+
+            var actualCheckOut = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+            _bookingRepo.CheckOut(bookingId, actualCheckOut);
+
+            message = $"Thanh toán & Check-out thành công! Hóa đơn HD{invoiceId:D3}: {FormatHelper.FormatCurrency(finalTotal)}";
+            return true;
+        }
+
+        message = "Không thể tạo hóa đơn thanh toán!";
+        return false;
+    }
+
+    public (double roomTotal, double serviceTotal, double discount, double vat, double finalTotal, int nights)
+        CalculateCheckOutBilling(int bookingId)
+    {
+        SessionManager.EnsureAnyPermission(
+            "Bạn không có quyền xem chi tiết tính tiền đặt phòng!",
+            AppConstants.QuyenQuanLyDatPhong,
+            AppConstants.QuyenDatPhongOnline);
+
+        var booking = _bookingRepo.GetById(bookingId);
+        if (booking == null) return (0, 0, 0, 0, 0, 0);
+
+        if (!SessionManager.HasStaffOrOwnerAccess(booking.CustomerId, AppConstants.QuyenQuanLyDatPhong))
+            throw new UnauthorizedAccessException("Bạn chỉ có quyền xem hóa đơn đặt phòng của chính mình!");
+        var dIn = string.IsNullOrWhiteSpace(booking.CheckInDate)
+            ? DateTime.Today
+            : FormatHelper.ParseDate(booking.CheckInDate);
+
+        var dOut = DateTime.Today;
+        var nights = FormatHelper.CalculateNights(dIn, dOut);
+        if (nights <= 0) nights = 1;
+
+        var roomTotal = booking.TotalAmount > 0 ? booking.TotalAmount : nights * 500000;
+        var services = _serviceRepo.GetUsagesByBookingId(bookingId);
+        double serviceTotal = 0;
+        if (services != null)
+        {
+            foreach (var item in services)
+            {
+                if (item != null)
+                    serviceTotal += item.LineTotal;
+            }
+        }
+
+        var discount = booking.Deposit;
+        var vat = Math.Round((roomTotal + serviceTotal - discount) * 0.08, 0);
+        if (vat < 0) vat = 0;
+
+        var finalTotal = roomTotal + serviceTotal - discount + vat;
+        if (finalTotal < 0) finalTotal = 0;
+
+        return (roomTotal, serviceTotal, discount, vat, finalTotal, nights);
     }
 }
