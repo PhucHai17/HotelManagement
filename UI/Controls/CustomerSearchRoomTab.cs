@@ -3,6 +3,7 @@ using Common.Constants;
 using Common.Helpers;
 using Entity.Entities;
 using Entity.Enums;
+using UI.Forms;
 using UI.Helpers;
 
 namespace UI.Controls;
@@ -38,7 +39,7 @@ public class CustomerSearchRoomTab : UserControl
         TaiDanhSachPhongTrong();
     }
 
-    // Khởi tạo toàn bộ bố cục giao diện tab tìm phòng
+    // Khởi tạo giao diện tab tìm phòng
     private void KhoiTaoGiaoDien()
     {
         var tblTimPhongRoot = new TableLayoutPanel
@@ -456,18 +457,40 @@ public class CustomerSearchRoomTab : UserControl
             AutoSize = true
         };
 
+        var btnChiTiet = new Button
+        {
+            Text = "Xem chi tiết",
+            Font = new Font("Times New Roman", 10f, FontStyle.Regular),
+            Location = new Point(14, 248),
+            Width = 108,
+            Height = 38,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand
+        };
+        UIHelper.DinhDangNutBamPhu(btnChiTiet);
+        btnChiTiet.Click += (s, e) =>
+        {
+            using var frm = new RoomDetailForm(lp);
+            if (frm.ShowDialog(this) == DialogResult.OK)
+            {
+                ChonLoaiPhong(lp);
+            }
+        };
+
         var btnChon = new Button
         {
             Text = "Chọn phòng",
             Font = new Font("Times New Roman", 10f, FontStyle.Bold),
-            Location = new Point(14, 248),
-            Width = 225,
-            Height = 38
+            Location = new Point(128, 248),
+            Width = 111,
+            Height = 38,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand
         };
         UIHelper.DinhDangNutBamNavy(btnChon);
         btnChon.Click += (s, e) => ChonLoaiPhong(lp);
 
-        pnl.Controls.AddRange(new Control[] { pnlAnh, lblTen, lblMoTa, lblGia, btnChon });
+        pnl.Controls.AddRange(new Control[] { pnlAnh, lblTen, lblMoTa, lblGia, btnChiTiet, btnChon });
         return pnl;
     }
 
