@@ -8,10 +8,12 @@ public class CustomerMainForm : Form
 {
     private Panel _pnlTimPhong = null!;
     private Panel _pnlDatPhong = null!;
+    private Panel _pnlTuChiaKhoa = null!;
     private Panel _pnlDichVu = null!;
     private Panel _pnlTaiKhoan = null!;
     private CustomerSearchRoomTab _searchRoomTab = null!;
     private CustomerMyBookingsTab _myBookingsTab = null!;
+    private CustomerKeyLockerTab _keyLockerTab = null!;
     private readonly List<Button> _danhSachNutNav = new();
     private readonly Dictionary<string, Panel> _tabPanels = new();
 
@@ -119,7 +121,7 @@ public class CustomerMainForm : Form
             Padding = new Padding(4, 12, 8, 0)
         };
 
-        string[] cacTab = { "Tìm phòng", "Đặt phòng", "Dịch vụ", "Tài khoản" };
+        string[] cacTab = { "Tìm phòng", "Đặt phòng", "Tủ chìa khóa", "Dịch vụ", "Tài khoản" };
         foreach (var tab in cacTab)
         {
             var btn = new Button
@@ -165,16 +167,22 @@ public class CustomerMainForm : Form
         _myBookingsTab = new CustomerMyBookingsTab { Dock = DockStyle.Fill };
         _pnlDatPhong.Controls.Add(_myBookingsTab);
 
+        _pnlTuChiaKhoa = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+        _keyLockerTab = new CustomerKeyLockerTab { Dock = DockStyle.Fill };
+        _pnlTuChiaKhoa.Controls.Add(_keyLockerTab);
+
         _pnlDichVu = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
         _pnlTaiKhoan = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
 
         _tabPanels["Tìm phòng"] = _pnlTimPhong;
         _tabPanels["Đặt phòng"] = _pnlDatPhong;
+        _tabPanels["Tủ chìa khóa"] = _pnlTuChiaKhoa;
         _tabPanels["Dịch vụ"] = _pnlDichVu;
         _tabPanels["Tài khoản"] = _pnlTaiKhoan;
 
         pnlMainContent.Controls.Add(_pnlTimPhong);
         pnlMainContent.Controls.Add(_pnlDatPhong);
+        pnlMainContent.Controls.Add(_pnlTuChiaKhoa);
         pnlMainContent.Controls.Add(_pnlDichVu);
         pnlMainContent.Controls.Add(_pnlTaiKhoan);
 
@@ -183,8 +191,7 @@ public class CustomerMainForm : Form
         pnlTopBar.SendToBack();
         pnlMainContent.BringToFront();
     }
-
-    // Chuyển đổi tab hiển thị trên giao diện
+    
     private void XuLyChuyenTab(string tenTab)
     {
         foreach (var (tab, panel) in _tabPanels)
@@ -209,6 +216,10 @@ public class CustomerMainForm : Form
         else if (tenTab == "Tìm phòng")
         {
             _searchRoomTab.TaiDanhSachPhongTrong();
+        }
+        else if (tenTab == "Tủ chìa khóa")
+        {
+            _keyLockerTab.TaiDuLieuTuKhoa();
         }
     }
 }
