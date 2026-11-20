@@ -155,7 +155,7 @@ public class CustomerSearchRoomTab : UserControl
             DropDownStyle = ComboBoxStyle.DropDownList,
             Margin = new Padding(0, 2, 12, 0)
         };
-        cboTimLoaiPhong.Items.AddRange(new object[] { "Tất cả", "Standard", "Deluxe", "Suite" });
+        cboTimLoaiPhong.Items.AddRange(new object[] { "Tất cả", "Standard", "Superior", "Deluxe", "Family", "Suite", "Presidential" });
         cboTimLoaiPhong.SelectedIndex = 0;
 
         var btnTim = new Button
@@ -383,7 +383,7 @@ public class CustomerSearchRoomTab : UserControl
         return row;
     }
 
-    // Tải danh sách các loại phòng trống hiển thị lên thẻ
+    // Tải danh sách các loại phòng trống
     public void TaiDanhSachPhongTrong()
     {
         UIHelper.RunSafe(() =>
@@ -393,7 +393,7 @@ public class CustomerSearchRoomTab : UserControl
 
             var filterLoai = cboTimLoaiPhong.SelectedItem?.ToString() ?? "Tất cả";
             var dsHienThi = dsLoai
-                .Where(lp => filterLoai == "Tất cả" || lp.Name == filterLoai)
+                .Where(lp => filterLoai == "Tất cả" || lp.Name.Equals(filterLoai, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             foreach (var lp in dsHienThi)

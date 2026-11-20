@@ -15,16 +15,27 @@ public static class ImageHelper
     private static readonly Dictionary<string, Image?> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static bool _exitHooked;
 
+    // Tải ảnh đại diện theo tên hạng phòng kèm fallback an toàn
     public static Image? LoadRoomImage(string? roomTypeName)
     {
         var key = NormalizeText(roomTypeName);
-        var fileName = key.Contains("suite")
-            ? "suite.jpg"
-            : key.Contains("deluxe")
-                ? "deluxe.jpg"
-                : "standard.jpg";
+        var fileName = key.Contains("presidential") || key.Contains("tong thong")
+            ? "presidential.jpg"
+            : key.Contains("family") || key.Contains("gia dinh")
+                ? "family.jpg"
+                : key.Contains("superior")
+                    ? "superior.jpg"
+                    : key.Contains("suite")
+                        ? "suite.jpg"
+                        : key.Contains("deluxe")
+                            ? "deluxe.jpg"
+                            : "standard.jpg";
 
-        return LoadEmbeddedImage(fileName) ?? LoadEmbeddedImage("standard.jpg");
+        return LoadEmbeddedImage(fileName)
+               ?? (fileName == "presidential.jpg" ? LoadEmbeddedImage("suite.jpg") : null)
+               ?? (fileName == "family.jpg" ? LoadEmbeddedImage("deluxe.jpg") : null)
+               ?? (fileName == "superior.jpg" ? LoadEmbeddedImage("standard.jpg") : null)
+               ?? LoadEmbeddedImage("standard.jpg");
     }
     
     public static Image? LoadServiceImage(string? serviceName)
