@@ -142,6 +142,7 @@ public class ServiceRepository : BaseRepository ,IServiceRepository
         return list;
     }
 
+    // Lấy danh sách chi tiết đặt phòng của khách để gắn dịch vụ
     public List<BookingDetail> GetCustomerBookingDetailsForService(int customerId)
     {
         var sql = @"
@@ -151,8 +152,7 @@ public class ServiceRepository : BaseRepository ,IServiceRepository
                 INNER JOIN Phong p ON ctdp.MaPhong = p.MaPhong
                 INNER JOIN LoaiPhong lp ON p.MaLoai = lp.MaLoai
                 WHERE dp.MaKH = @MaKH AND dp.TrangThai <> 'Đã hủy'
-                ORDER BY dp.MaDP DESC, ctdp.MaCTDP DESC
-                LIMIT 5;";
+                ORDER BY dp.MaDP DESC, ctdp.MaCTDP DESC;";
 
         var table = DatabaseHelper.ExecuteDataTable(sql, CreateParameter("@MaKH", customerId));
         var list = new List<BookingDetail>();

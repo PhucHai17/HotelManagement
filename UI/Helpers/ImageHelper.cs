@@ -49,9 +49,13 @@ public static class ImageHelper
                     ? "spa.jpg"
                     : key.Contains("giat") || key.Contains("laundry")
                         ? "laundry.jpg"
-                        : "default-service.jpg";
+                        : key.Contains("minibar") || key.Contains("snack") || key.Contains("nuoc")
+                            ? "minibar.jpg"
+                            : "default-service.jpg";
 
-        return LoadEmbeddedImage(fileName) ?? LoadEmbeddedImage("default-service.jpg");
+        return LoadEmbeddedImage(fileName)
+               ?? (fileName != "breakfast.jpg" ? LoadEmbeddedImage("breakfast.jpg") : null)
+               ?? LoadEmbeddedImage("default-service.jpg");
     }
     
     public static Image? LoadHero()
@@ -213,6 +217,8 @@ public static class ImageHelper
         {
             var testPath = Path.Combine(dir, "Resources", "Images", fileName);
             if (File.Exists(testPath)) return testPath;
+            var testPathUi = Path.Combine(dir, "UI", "Resources", "Images", fileName);
+            if (File.Exists(testPathUi)) return testPathUi;
             var parent = Directory.GetParent(dir);
             if (parent == null) break;
             dir = parent.FullName;

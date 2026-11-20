@@ -14,6 +14,7 @@ public class CustomerMainForm : Form
     private CustomerSearchRoomTab _searchRoomTab = null!;
     private CustomerMyBookingsTab _myBookingsTab = null!;
     private CustomerKeyLockerTab _keyLockerTab = null!;
+    private CustomerServicesTab _servicesTab = null!;
     private readonly List<Button> _danhSachNutNav = new();
     private readonly Dictionary<string, Panel> _tabPanels = new();
 
@@ -172,6 +173,9 @@ public class CustomerMainForm : Form
         _pnlTuChiaKhoa.Controls.Add(_keyLockerTab);
 
         _pnlDichVu = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+        _servicesTab = new CustomerServicesTab { Dock = DockStyle.Fill };
+        _pnlDichVu.Controls.Add(_servicesTab);
+
         _pnlTaiKhoan = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
 
         _tabPanels["Tìm phòng"] = _pnlTimPhong;
@@ -192,6 +196,7 @@ public class CustomerMainForm : Form
         pnlMainContent.BringToFront();
     }
     
+    // Chuyển đổi tab hiển thị trên giao diện
     private void XuLyChuyenTab(string tenTab)
     {
         foreach (var (tab, panel) in _tabPanels)
@@ -220,6 +225,10 @@ public class CustomerMainForm : Form
         else if (tenTab == "Tủ chìa khóa")
         {
             _keyLockerTab.TaiDuLieuTuKhoa();
+        }
+        else if (tenTab == "Dịch vụ")
+        {
+            _servicesTab.TaiDuLieuDichVu();
         }
     }
 }
