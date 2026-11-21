@@ -15,6 +15,9 @@ public class CustomerMainForm : Form
     private CustomerMyBookingsTab _myBookingsTab = null!;
     private CustomerKeyLockerTab _keyLockerTab = null!;
     private CustomerServicesTab _servicesTab = null!;
+    private CustomerAccountTab _accountTab = null!;
+    private Label _lblXinChao = null!;
+    private ToolTip _toolTipUser = null!;
     private readonly List<Button> _danhSachNutNav = new();
     private readonly Dictionary<string, Panel> _tabPanels = new();
 
@@ -74,7 +77,8 @@ public class CustomerMainForm : Form
             ? tenHienThi[..27].TrimEnd() + "..."
             : tenHienThi;
 
-        var lblXinChao = new Label
+        _toolTipUser = new ToolTip();
+        _lblXinChao = new Label
         {
             Text = $"Xin chào, {tenRutGon}",
             ForeColor = Color.White,
@@ -84,9 +88,7 @@ public class CustomerMainForm : Form
             UseMnemonic = false,
             Margin = new Padding(0, 10, 12, 0)
         };
-
-        var toolTip = new ToolTip();
-        toolTip.SetToolTip(lblXinChao, $"Xin chào, {tenHienThi}");
+        _toolTipUser.SetToolTip(_lblXinChao, $"Xin chào, {tenHienThi}");
 
         var fontNutDangXuat = new Font("Times New Roman", 10f, FontStyle.Bold);
         var rongNutDangXuat = Math.Max(108, TextRenderer.MeasureText("Đăng xuất", fontNutDangXuat).Width + 28);
@@ -111,7 +113,7 @@ public class CustomerMainForm : Form
             Close();
         };
 
-        pnlRightUser.Controls.Add(lblXinChao);
+        pnlRightUser.Controls.Add(_lblXinChao);
         pnlRightUser.Controls.Add(btnDangXuat);
 
         var flowNav = new FlowLayoutPanel
@@ -177,6 +179,9 @@ public class CustomerMainForm : Form
         _pnlDichVu.Controls.Add(_servicesTab);
 
         _pnlTaiKhoan = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+        _accountTab = new CustomerAccountTab { Dock = DockStyle.Fill };
+        _accountTab.OnProfileUpdated += (tenMoi) => CapNhatLoiChao(tenMoi);
+        _pnlTaiKhoan.Controls.Add(_accountTab);
 
         _tabPanels["Tìm phòng"] = _pnlTimPhong;
         _tabPanels["Đặt phòng"] = _pnlDatPhong;
@@ -196,7 +201,24 @@ public class CustomerMainForm : Form
         pnlMainContent.BringToFront();
     }
     
-    // Chuyển đổi tab hiển thị trên giao diện
+    public void CapNhatLoiChao(string? hoTen = null)
+    {
+        var tenHienThi = !string.IsNullOrWhiteSpace(hoTen)
+            ? hoTen.Trim()
+            : string.IsNullOrWhiteSpace(SessionManager.DisplayName)
+                ? "Khách hàng"
+                : SessionManager.DisplayName.Trim();
+        var tenRutGon = tenHienThi.Length > 30
+            ? tenHienThi[..27].TrimEnd() + "..."
+            : tenHienThi;
+
+        if (_lblXinChao != null)
+        {
+            _lblXinChao.Text = $"Xin chào, {tenRutGon}";
+            _toolTipUser?.SetToolTip(_lblXinChao, $"Xin chào, {tenHienThi}");
+        }
+    }
+    
     private void XuLyChuyenTab(string tenTab)
     {
         foreach (var (tab, panel) in _tabPanels)
@@ -229,6 +251,10 @@ public class CustomerMainForm : Form
         else if (tenTab == "Dịch vụ")
         {
             _servicesTab.TaiDuLieuDichVu();
+        }
+        else if (tenTab == "Tài khoản")
+        {
+            _accountTab.TaiDuLieuTaiKhoan();
         }
     }
 }
