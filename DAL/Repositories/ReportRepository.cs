@@ -1,15 +1,15 @@
+using System.Globalization;
+
 namespace DAL.Repositories;
 
 // Repository thống kê & báo cáo
 public class ReportRepository : BaseRepository, IReportRepository
 {
-    // Lấy số liệu 4 thẻ thống kê Dashboard
     public DashboardStatsDto GetDashboardStats()
     {
         var stats = new DashboardStatsDto();
         var today = DateTime.Today.ToString("yyyy-MM-dd");
 
-        // Đếm số phòng theo trạng thái
         var sqlRooms = @"
                 SELECT TrangThai, COUNT(*) AS SoLuong 
                 FROM Phong 
@@ -31,7 +31,6 @@ public class ReportRepository : BaseRepository, IReportRepository
 
         stats.TotalRooms = total;
 
-        // Số lượt check-in hôm nay
         var sqlCheckIn = @"
             SELECT COUNT(*) 
             FROM DatPhong 
@@ -40,7 +39,6 @@ public class ReportRepository : BaseRepository, IReportRepository
         stats.TodayCheckIns = Convert.ToInt32(
             DatabaseHelper.ExecuteScalar(sqlCheckIn, CreateParameter("@Today", today)) ?? 0);
 
-        // Số lượt check-out hôm nay
         var sqlCheckOut = @"
             SELECT COUNT(*) 
             FROM DatPhong 
@@ -49,7 +47,6 @@ public class ReportRepository : BaseRepository, IReportRepository
         stats.TodayCheckOuts = Convert.ToInt32(
             DatabaseHelper.ExecuteScalar(sqlCheckOut, CreateParameter("@Today", today)) ?? 0);
 
-        // Đặt phòng mới hôm nay
         var sqlNewBookings = @"
             SELECT COUNT(*) 
             FROM DatPhong 
@@ -57,7 +54,6 @@ public class ReportRepository : BaseRepository, IReportRepository
         stats.TodayNewBookings = Convert.ToInt32(
             DatabaseHelper.ExecuteScalar(sqlNewBookings, CreateParameter("@Today", today)) ?? 0);
 
-        // Doanh thu hôm nay
         var sqlRevenue = "SELECT COALESCE(SUM(TongTien), 0) FROM HoaDon WHERE TrangThai = 'Đã thanh toán';";
         var revObj = DatabaseHelper.ExecuteScalar(sqlRevenue);
         stats.TodayRevenue = revObj != DBNull.Value && revObj != null ? Convert.ToDouble(revObj) : 0;
@@ -70,7 +66,7 @@ public class ReportRepository : BaseRepository, IReportRepository
     {
         var list = new List<TodoItemDto>();
         var today = DateTime.Today.ToString("yyyy-MM-dd");
-        // 1. Check-in
+
         var sqlCheckIn = @"
                 SELECT p.SoPhong, kh.HoTen
                 FROM DatPhong dp
@@ -81,7 +77,7 @@ public class ReportRepository : BaseRepository, IReportRepository
                 AND substr(dp.NgayNhan, 1, 10) <= @Today
             ORDER BY dp.NgayNhan ASC
             LIMIT 10;";
-        var dtIn = DatabaseHelper.ExecuteDataTable(sqlCheckIn,CreateParameter("@Today", today));
+        var dtIn = DatabaseHelper.ExecuteDataTable(sqlCheckIn, CreateParameter("@Today", today));
         foreach (DataRow r in dtIn.Rows)
             list.Add(new TodoItemDto
             {
@@ -90,7 +86,6 @@ public class ReportRepository : BaseRepository, IReportRepository
                 TaskDescription = "Check-in"
             });
 
-        // 2. Check-out
         var sqlCheckOut = @"
                 SELECT DISTINCT p.SoPhong, kh.HoTen
                 FROM DatPhong dp
@@ -109,7 +104,6 @@ public class ReportRepository : BaseRepository, IReportRepository
                 TaskDescription = "Check-out"
             });
 
-        // 3. Dọn phòng
         var sqlCleaning = "SELECT SoPhong FROM Phong WHERE TrangThai = 'Đang dọn' ORDER BY SoPhong ASC;";
         var dtCleaning = DatabaseHelper.ExecuteDataTable(sqlCleaning);
         foreach (DataRow r in dtCleaning.Rows)
@@ -127,68 +121,186 @@ public class ReportRepository : BaseRepository, IReportRepository
     public Dictionary<string, double> Get7DayOccupancyRate()
     {
         var result = new Dictionary<string, double>();
-    var totalRooms = Convert.ToInt32(DatabaseHelper.ExecuteScalar("SELECT COUNT(*) FROM Phong;") ?? 0);
-    if (totalRooms <= 0) return result;
+        var totalRooms = Convert.ToInt32(DatabaseHelper.ExecuteScalar("SELECT COUNT(*) FROM Phong;") ?? 0);
+        if (totalRooms <= 0) return result;
 
-    var occupiedNow = Convert.ToInt32(
-        DatabaseHelper.ExecuteScalar("SELECT COUNT(*) FROM Phong WHERE TrangThai = 'Có khách';") ?? 0);
+        var occupiedNow = Convert.ToInt32(
+            DatabaseHelper.ExecuteScalar("SELECT COUNT(*) FROM Phong WHERE TrangThai = 'Có khách';") ?? 0);
 
-    for (int i = 6; i >= 0; i--)
-    {
-        var date = DateTime.Today.AddDays(-i);
-        var dateStr = date.ToString("yyyy-MM-dd");
+        for (var i = 6; i >= 0; i--)
+        {
+            var date = DateTime.Today.AddDays(-i);
+            var dateStr = date.ToString("yyyy-MM-dd");
 
-        var sql = @"
-            SELECT COUNT(DISTINCT ctdp.MaPhong)
-            FROM DatPhong dp
-            INNER JOIN ChiTietDatPhong ctdp ON dp.MaDP = ctdp.MaDP
-            WHERE dp.TrangThai NOT IN ('Đã hủy', 'Chờ duyệt')
-              AND (
-                  CASE WHEN instr(dp.NgayNhan, '/') > 0
-                       THEN substr(dp.NgayNhan, 7, 4) || '-' || substr(dp.NgayNhan, 4, 2) || '-' || substr(dp.NgayNhan, 1, 2)
-                       ELSE substr(dp.NgayNhan, 1, 10)
-                  END
-              ) <= @Ngay
-              AND (
-                  (
-                      CASE WHEN instr(dp.NgayTra, '/') > 0
-                           THEN substr(dp.NgayTra, 7, 4) || '-' || substr(dp.NgayTra, 4, 2) || '-' || substr(dp.NgayTra, 1, 2)
-                           ELSE substr(dp.NgayTra, 1, 10)
-                      END
-                  ) > @Ngay
-                  OR
-                  (
+            var sql = @"
+                SELECT COUNT(DISTINCT ctdp.MaPhong)
+                FROM DatPhong dp
+                INNER JOIN ChiTietDatPhong ctdp ON dp.MaDP = ctdp.MaDP
+                WHERE dp.TrangThai NOT IN ('Đã hủy', 'Chờ duyệt')
+                  AND (
                       CASE WHEN instr(dp.NgayNhan, '/') > 0
                            THEN substr(dp.NgayNhan, 7, 4) || '-' || substr(dp.NgayNhan, 4, 2) || '-' || substr(dp.NgayNhan, 1, 2)
                            ELSE substr(dp.NgayNhan, 1, 10)
                       END
-                  ) = @Ngay
-              );";
+                  ) <= @Ngay
+                  AND (
+                      (
+                          CASE WHEN instr(dp.NgayTra, '/') > 0
+                               THEN substr(dp.NgayTra, 7, 4) || '-' || substr(dp.NgayTra, 4, 2) || '-' || substr(dp.NgayTra, 1, 2)
+                               ELSE substr(dp.NgayTra, 1, 10)
+                          END
+                      ) > @Ngay
+                      OR
+                      (
+                          CASE WHEN instr(dp.NgayNhan, '/') > 0
+                               THEN substr(dp.NgayNhan, 7, 4) || '-' || substr(dp.NgayNhan, 4, 2) || '-' || substr(dp.NgayNhan, 1, 2)
+                               ELSE substr(dp.NgayNhan, 1, 10)
+                          END
+                      ) = @Ngay
+                  );";
 
-        var count = Convert.ToInt32(
-            DatabaseHelper.ExecuteScalar(sql, CreateParameter("@Ngay", dateStr)) ?? 0);
+            var count = Convert.ToInt32(
+                DatabaseHelper.ExecuteScalar(sql, CreateParameter("@Ngay", dateStr)) ?? 0);
 
-        if (i == 0 && occupiedNow > count) count = occupiedNow;
+            if (i == 0 && occupiedNow > count) count = occupiedNow;
 
-        result[date.ToString("dd/MM")] = Math.Round(count * 100.0 / totalRooms, 1);
+            result[date.ToString("dd/MM")] = Math.Round(count * 100.0 / totalRooms, 1);
+        }
+
+        return result;
     }
 
-    return result;
-    }
-
-    // Thống kê doanh thu theo tháng
+    // Thống kê doanh thu theo tháng thực tế từ cơ sở dữ liệu
     public List<RevenueReportDto> GetMonthlyRevenue(int year)
     {
-        return new List<RevenueReportDto>
+        var result = new List<RevenueReportDto>();
+        var currentYear = DateTime.Today.Year;
+        var maxMonth = (year < currentYear) ? 12 : (year == currentYear ? DateTime.Today.Month : 0);
+        if (maxMonth <= 0) return result;
+
+        var sqlRevenue = @"
+            SELECT 
+                CASE 
+                    WHEN instr(NgayLap, '/') > 0 THEN CAST(substr(NgayLap, 4, 2) AS INT)
+                    ELSE CAST(substr(NgayLap, 6, 2) AS INT)
+                END AS Thang,
+                COALESCE(SUM(TongTien), 0) AS DoanhThu
+            FROM HoaDon
+            WHERE (TrangThai = 'Đã thanh toán' OR TrangThai = 'Paid')
+              AND (
+                  CASE 
+                      WHEN instr(NgayLap, '/') > 0 THEN CAST(substr(NgayLap, 7, 4) AS INT)
+                      ELSE CAST(substr(NgayLap, 1, 4) AS INT)
+                  END
+              ) = @Nam
+            GROUP BY Thang;";
+
+        var revenueByMonth = new Dictionary<int, double>();
+        var dtRevenue = DatabaseHelper.ExecuteDataTable(sqlRevenue, CreateParameter("@Nam", year));
+        foreach (DataRow r in dtRevenue.Rows)
         {
-            new() { Period = "T1", Revenue = 42000000, OccupancyRate = 65, GuestCount = 120 },
-            new() { Period = "T2", Revenue = 58000000, OccupancyRate = 72, GuestCount = 150 },
-            new() { Period = "T3", Revenue = 39000000, OccupancyRate = 58, GuestCount = 105 },
-            new() { Period = "T4", Revenue = 78000000, OccupancyRate = 85, GuestCount = 210 },
-            new() { Period = "T5", Revenue = 69000000, OccupancyRate = 79, GuestCount = 185 },
-            new() { Period = "T6", Revenue = 95000000, OccupancyRate = 94, GuestCount = 260 },
-            new() { Period = "T7", Revenue = 88000000, OccupancyRate = 89, GuestCount = 240 },
-            new() { Period = "T8", Revenue = 74000000, OccupancyRate = 81, GuestCount = 195 }
-        };
+            var thang = Convert.ToInt32(r["Thang"]);
+            revenueByMonth[thang] = Convert.ToDouble(r["DoanhThu"]);
+        }
+
+        var sqlGuests = @"
+            SELECT 
+                CASE 
+                    WHEN instr(dp.NgayNhan, '/') > 0 THEN CAST(substr(dp.NgayNhan, 4, 2) AS INT)
+                    ELSE CAST(substr(dp.NgayNhan, 6, 2) AS INT)
+                END AS Thang,
+                COALESCE(SUM(COALESCE(dp.SoKhach, 1)), 0) AS TongKhach
+            FROM DatPhong dp
+            WHERE dp.TrangThai NOT IN ('Đã hủy', 'Cancelled')
+              AND (
+                  CASE 
+                      WHEN instr(dp.NgayNhan, '/') > 0 THEN CAST(substr(dp.NgayNhan, 7, 4) AS INT)
+                      ELSE CAST(substr(dp.NgayNhan, 1, 4) AS INT)
+                  END
+              ) = @Nam
+            GROUP BY Thang;";
+
+        var guestsByMonth = new Dictionary<int, int>();
+        var dtGuests = DatabaseHelper.ExecuteDataTable(sqlGuests, CreateParameter("@Nam", year));
+        foreach (DataRow r in dtGuests.Rows)
+        {
+            var thang = Convert.ToInt32(r["Thang"]);
+            guestsByMonth[thang] = Convert.ToInt32(r["TongKhach"]);
+        }
+
+        var totalRooms = Convert.ToInt32(DatabaseHelper.ExecuteScalar("SELECT COUNT(*) FROM Phong;") ?? 0);
+        if (totalRooms <= 0) totalRooms = 1;
+
+        var sqlBookings = @"
+            SELECT dp.MaDP, dp.NgayNhan, dp.NgayTra, COALESCE(dp.SoKhach, 1) AS SoKhach,
+                   COUNT(DISTINCT ctdp.MaPhong) AS SoPhong
+            FROM DatPhong dp
+            LEFT JOIN ChiTietDatPhong ctdp ON dp.MaDP = ctdp.MaDP
+            WHERE dp.TrangThai NOT IN ('Đã hủy', 'Cancelled')
+            GROUP BY dp.MaDP, dp.NgayNhan, dp.NgayTra, dp.SoKhach;";
+
+        var dtBookings = DatabaseHelper.ExecuteDataTable(sqlBookings);
+
+        for (var m = 1; m <= maxMonth; m++)
+        {
+            var startOfMonth = new DateTime(year, m, 1);
+            var daysInMonth = DateTime.DaysInMonth(year, m);
+            var startOfNextMonth = startOfMonth.AddMonths(1);
+            var occupiedRoomNights = 0;
+            var monthGuests = 0;
+
+            foreach (DataRow r in dtBookings.Rows)
+            {
+                if (!TryParseFlexibleDate(r["NgayNhan"]?.ToString(), out var checkIn)) continue;
+                if (!TryParseFlexibleDate(r["NgayTra"]?.ToString(), out var checkOut) || checkOut <= checkIn)
+                {
+                    checkOut = checkIn.AddDays(1);
+                }
+
+                if (checkIn.Year == year && checkIn.Month == m)
+                {
+                    monthGuests += Convert.ToInt32(r["SoKhach"]);
+                }
+
+                var overlapStart = checkIn > startOfMonth ? checkIn : startOfMonth;
+                var overlapEnd = checkOut < startOfNextMonth ? checkOut : startOfNextMonth;
+                if (overlapEnd > overlapStart)
+                {
+                    var nights = (overlapEnd - overlapStart).Days;
+                    var roomCount = Math.Max(1, Convert.ToInt32(r["SoPhong"]));
+                    occupiedRoomNights += nights * roomCount;
+                }
+            }
+
+            var totalCapacity = totalRooms * daysInMonth;
+            var occupancyRate = totalCapacity > 0
+                ? Math.Round(occupiedRoomNights * 100.0 / totalCapacity, 1)
+                : 0;
+            if (occupancyRate > 100.0) occupancyRate = 100.0;
+
+            revenueByMonth.TryGetValue(m, out var rev);
+            var guestCount = guestsByMonth.TryGetValue(m, out var g) && g > 0 ? g : monthGuests;
+
+            result.Add(new RevenueReportDto
+            {
+                Period = $"T{m}",
+                Revenue = rev,
+                OccupancyRate = occupancyRate,
+                GuestCount = guestCount
+            });
+        }
+
+        return result;
+    }
+    
+    private static bool TryParseFlexibleDate(string? input, out DateTime date)
+    {
+        date = DateTime.MinValue;
+        if (string.IsNullOrWhiteSpace(input)) return false;
+        var s = input.Trim();
+        if (s.Length > 10 && (s[10] == ' ' || s[10] == 'T')) s = s.Substring(0, 10);
+        string[] formats = { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "yyyy/MM/dd" };
+        return DateTime.TryParseExact(s, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out date)
+               || DateTime.TryParse(s, out date);
     }
 }

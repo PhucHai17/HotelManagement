@@ -272,7 +272,7 @@ public class CustomerAccountTab : UserControl
         var tblStats = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = 98,
+            Height = 116,
             RowCount = 2,
             ColumnCount = 2,
             Margin = new Padding(0, 6, 0, 4),
@@ -502,8 +502,7 @@ public class CustomerAccountTab : UserControl
             TaiThongKeThanhVienVaDonPhong(khach);
         }, "tải dữ liệu tài khoản", this);
     }
-
-    // Điền dữ liệu khách hàng lên các ô nhập số liệu
+    
     private void NapThongTinKhachHang(Customer? khach)
     {
         if (khach != null && khach.CustomerId > 0)
