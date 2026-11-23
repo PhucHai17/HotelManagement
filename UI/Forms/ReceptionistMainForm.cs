@@ -286,9 +286,20 @@ public partial class ReceptionistMainForm : Form
                 _bookingTab.TaiDuLieuDatPhong();
                 break;
             case "Check-in / Check-out":
-            case "Check-in/Check-out":
                 ChuyenTab(pnlCheckInOut, "Check-in / Check-out");
                 TaiDuLieuCheckInOut();
+                break;
+            case "Khách hàng":
+                ChuyenTab(pnlKhachHang, tenChucNang);
+                TaiDuLieuKhachHang();
+                break;
+            case "Dịch vụ":
+                ChuyenTab(pnlDichVu, tenChucNang);
+                TaiDuLieuDichVu();
+                break;
+            case "Hóa đơn":
+                ChuyenTab(pnlHoaDon, tenChucNang);
+                TaiDuLieuHoaDon();
                 break;
             case "Báo cáo":
                 if (pnlBaoCao != null)
@@ -303,7 +314,7 @@ public partial class ReceptionistMainForm : Form
         }
     }
     
-    protected void ChuyenTab(Panel tabCanHien, string tenChucNang)
+    protected void  ChuyenTab(Panel tabCanHien, string tenChucNang)
     {
         foreach (Control c in pnlMainContent.Controls) c.Visible = false;
         tabCanHien.Visible = true;
@@ -344,7 +355,19 @@ public partial class ReceptionistMainForm : Form
         pnlCheckInOut = new Panel { Dock = DockStyle.Fill };
         KhoiTaoTabCheckInOut();
         pnlMainContent.Controls.Add(pnlCheckInOut);
-
+        
+        pnlKhachHang = new Panel { Dock = DockStyle.Fill };
+        KhoiTaoTabKhachHang();
+        pnlMainContent.Controls.Add(pnlKhachHang);
+        
+        pnlDichVu = new Panel { Dock = DockStyle.Fill };
+        KhoiTaoTabDichVu();
+        pnlMainContent.Controls.Add(pnlDichVu);
+        
+        pnlHoaDon = new Panel { Dock = DockStyle.Fill };
+        KhoiTaoTabHoaDon();
+        pnlMainContent.Controls.Add(pnlHoaDon);
+        
         KhoiTaoTabBaoCao();
         if (pnlBaoCao != null)
         {

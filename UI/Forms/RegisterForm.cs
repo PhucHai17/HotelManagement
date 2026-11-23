@@ -1,15 +1,13 @@
+namespace UI.Forms;
+
 using BLL;
 using BLL.Interfaces;
 using Common.Constants;
 using Common.Helpers;
 using UI.Controls;
 using UI.Helpers;
-
-namespace UI.Forms;
-
-// Form đăng ký tài khoản khách hàng
 public class RegisterForm : Form
-{
+{ 
     private readonly IAuthService _taiKhoanBLL = AppServices.Auth;
     private Button btnDangKy = null!;
     private LinkLabel lnkDangNhap = null!;

@@ -22,7 +22,7 @@ public partial class ReceptionistMainForm
                 ColumnCount = 1,
                 Margin = new Padding(0)
             };
-            tblRootTongQuan.RowStyles.Add(new RowStyle(SizeType.Absolute, 95f));
+            tblRootTongQuan.RowStyles.Add(new RowStyle(SizeType.Absolute, 118f));
             tblRootTongQuan.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
             // 4 thẻ thống kê trên cùng (mỗi thẻ 25%)
@@ -38,10 +38,10 @@ public partial class ReceptionistMainForm
             tblCards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
             tblCards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
 
-            cardTQPhongTrong = new StatCardControl { Title = "Phòng trống", TopAccentColor = Color.FromArgb(16, 185, 129), Dock = DockStyle.Fill };
-            cardTQCongSuat = new StatCardControl { Title = "Công suất phòng", TopAccentColor = Color.FromArgb(245, 158, 11), Dock = DockStyle.Fill };
-            cardTQDoanhThu = new StatCardControl { Title = "Doanh thu hôm nay", TopAccentColor = Color.FromArgb(59, 130, 246), Dock = DockStyle.Fill };
-            cardTQDatMoi = new StatCardControl { Title = "Đặt mới hôm nay", TopAccentColor = Color.FromArgb(239, 68, 68), Dock = DockStyle.Fill };
+            cardTQPhongTrong = new StatCardControl { Title = "Phòng trống", TopAccentColor = Color.FromArgb(16, 185, 129), Dock = DockStyle.Fill,Margin = new Padding(0, 0, 8, 0) };
+            cardTQCongSuat = new StatCardControl { Title = "Công suất phòng", TopAccentColor = Color.FromArgb(245, 158, 11), Dock = DockStyle.Fill,Margin = new Padding(4, 0, 4, 0) };
+            cardTQDoanhThu = new StatCardControl { Title = "Doanh thu hôm nay", TopAccentColor = Color.FromArgb(59, 130, 246), Dock = DockStyle.Fill,Margin = new Padding(4, 0, 4, 0) };
+            cardTQDatMoi = new StatCardControl { Title = "Đặt mới hôm nay", TopAccentColor = Color.FromArgb(239, 68, 68), Dock = DockStyle.Fill,Margin = new Padding(8, 0, 0, 0) };
 
             tblCards.Controls.Add(cardTQPhongTrong, 0, 0);
             tblCards.Controls.Add(cardTQCongSuat, 1, 0);
@@ -113,7 +113,7 @@ public partial class ReceptionistMainForm
 
             var lblTaskTitle = new Label
             {
-                Text = "Việc cần làm hôm nay",
+                Text = "Những việc cần làm ",
                 Font = new Font(AppConstants.FontChuChinh, 13f, FontStyle.Bold),
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
@@ -152,6 +152,12 @@ public partial class ReceptionistMainForm
 
             tblRootTongQuan.Controls.Add(tblBody, 0, 1);
             pnlTongQuan.Controls.Add(tblRootTongQuan);
+            
+            pnlTongQuan.VisibleChanged += (s, e) =>
+            {
+                if (pnlTongQuan.Visible)
+                    TaiDuLieuTongQuan();
+            };
         }
 
         private void TaiDuLieuTongQuan()
@@ -159,17 +165,22 @@ public partial class ReceptionistMainForm
             UIHelper.RunSafe(() =>
             {
                 var tk = _baoCaoBLL.GetDashboardStats();
+                double congSuat = tk.OccupancyRate > 0
+            ? tk.OccupancyRate
+            : (tk.TotalRooms > 0 ? tk.OccupiedRooms * 100.0 / tk.TotalRooms : 0);
                 cardTQPhongTrong.Value = tk.AvailableRooms.ToString();
                 cardTQCongSuat.Value = $"{tk.OccupancyRate:N0}%";
                 cardTQDoanhThu.Value = FormatHelper.FormatCurrency(tk.TodayRevenue);
                 cardTQDatMoi.Value = tk.TodayNewBookings.ToString();
+                cardTQPhongTrong.Invalidate();
+                cardTQCongSuat.Invalidate();
+                cardTQDoanhThu.Invalidate();
+                cardTQDatMoi.Invalidate();
 
                 var dict7 = _baoCaoBLL.Get7DayOccupancyRate();
                 bieuDo7Ngay.UpdateData(dict7);
                 bieuDo7Ngay.Invalidate();
-                double congSuat = tk.OccupancyRate > 0
-                    ? tk.OccupancyRate
-                    : (tk.TotalRooms > 0 ? tk.OccupiedRooms * 100.0 / tk.TotalRooms : 0);
+                
                 dgvViecCanLam.Rows.Clear();
                 var dsViec = _baoCaoBLL.GetTodayTodoList();
                 foreach (var v in dsViec)

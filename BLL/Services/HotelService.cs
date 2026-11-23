@@ -230,4 +230,59 @@ public class HotelService : IHotelService
         if (customerId <= 0) return new List<ServiceUsage>();
         return _serviceRepo.GetUsagesByCustomerId(customerId);
     }
+
+    public bool SaveService(Service dv, out string s)
+    {
+        if (dv == null)
+        {
+            s = "Dữ liệu dịch vụ không hợp lệ!";
+            return false;
+        }
+
+        dv.Name = dv.Name?.Trim() ?? string.Empty;
+        dv.Unit = dv.Unit?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(dv.Name))
+        {
+            s = "Vui lòng nhập tên dịch vụ!";
+            return false;
+        }
+
+        if (dv.UnitPrice < 0)
+        {
+            s = "Đơn giá dịch vụ không được nhỏ hơn 0!";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(dv.Unit))
+        {
+            s = "Vui lòng nhập đơn vị tính!";
+            return false;
+        }
+
+        // Kiểm tra trùng tên dịch vụ (bỏ qua chính nó khi đang cập nhật)
+        var dsHienCo = _serviceRepo.GetAll();
+        bool biTrungTen = dsHienCo.Exists(x =>
+            x.ServiceId != dv.ServiceId &&
+            string.Equals(x.Name.Trim(), dv.Name, StringComparison.OrdinalIgnoreCase));
+
+        if (biTrungTen)
+        {
+            s = $"Dịch vụ \"{dv.Name}\" đã tồn tại trong danh mục!";
+            return false;
+        }
+
+        if (dv.ServiceId <= 0)
+        {
+            bool kq = _serviceRepo.Add(dv);
+            s = kq ? "Thêm dịch vụ mới thành công!" : "Không thể thêm dịch vụ mới!";
+            return kq;
+        }
+        else
+        {
+            bool kq = _serviceRepo.Update(dv);
+            s = kq ? "Cập nhật dịch vụ thành công!" : "Không thể cập nhật dịch vụ!";
+            return kq;
+        }
+    }
 }

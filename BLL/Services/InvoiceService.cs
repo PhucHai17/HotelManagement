@@ -25,7 +25,12 @@ public class InvoiceService : IInvoiceService
             "Bạn không có quyền xem danh sách hóa đơn!",
             AppConstants.QuyenQuanLyDatPhong,
             AppConstants.QuyenXemBaoCao);
-        return _invoiceRepo.GetAll();
+        var ds = _invoiceRepo.GetAll();
+        foreach (var hd in ds)
+        {
+            ChuanHoaSoTien(hd);
+        }
+        return ds;
     }
 
     // Lấy hóa đơn theo mã
@@ -38,11 +43,16 @@ public class InvoiceService : IInvoiceService
             AppConstants.QuyenDatPhongOnline);
 
         var invoice = _invoiceRepo.GetById(invoiceId);
-        if (invoice != null && !SessionManager.HasAnyPermission(AppConstants.QuyenQuanLyDatPhong, AppConstants.QuyenXemBaoCao))
+        if (invoice != null)
         {
-            var booking = _bookingRepo.GetById(invoice.BookingId);
-            if (booking == null || !SessionManager.HasStaffOrOwnerAccess(booking.CustomerId, AppConstants.QuyenQuanLyDatPhong, AppConstants.QuyenXemBaoCao))
-                throw new UnauthorizedAccessException("Bạn chỉ có quyền xem hóa đơn của chính mình!");
+            if (!SessionManager.HasAnyPermission(AppConstants.QuyenQuanLyDatPhong, AppConstants.QuyenXemBaoCao))
+            {
+                var booking = _bookingRepo.GetById(invoice.BookingId);
+                if (booking == null || !SessionManager.HasStaffOrOwnerAccess(booking.CustomerId, AppConstants.QuyenQuanLyDatPhong, AppConstants.QuyenXemBaoCao))
+                    throw new UnauthorizedAccessException("Bạn chỉ có quyền xem hóa đơn của chính mình!");
+            }
+
+            ChuanHoaSoTien(invoice);
         }
 
         return invoice;
@@ -74,5 +84,27 @@ public class InvoiceService : IInvoiceService
 
         message = "Thanh toán thất bại!";
         return false;
+    }
+    private static void ChuanHoaSoTien(Invoice hd)
+    {
+        var tamTinh = hd.RoomCharge + hd.ServiceCharge;
+
+        // Khôi phục đúng VAT và Tổng cộng nếu DB lưu nhầm VAT vào cột TotalAmount
+        if (hd.VatAmount <= 0 && hd.TotalAmount > 0 && hd.TotalAmount < tamTinh)
+        {
+            hd.VatAmount = hd.TotalAmount;
+            hd.TotalAmount = tamTinh + hd.VatAmount;
+            return;
+        }
+
+        if (hd.VatAmount <= 0 && tamTinh > 0)
+        {
+            hd.VatAmount = Math.Round(tamTinh * 8 / 100, 0);
+        }
+
+        if (hd.TotalAmount < tamTinh)
+        {
+            hd.TotalAmount = tamTinh + hd.VatAmount;
+        }
     }
 }

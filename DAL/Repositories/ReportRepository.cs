@@ -31,53 +31,106 @@ public class ReportRepository : BaseRepository, IReportRepository
 
         stats.TotalRooms = total;
 
-        var sqlCheckIn = @"
-            SELECT COUNT(*) 
-            FROM DatPhong 
-            WHERE substr(NgayNhan, 1, 10) = @Today 
-              AND TrangThai IN ('Chờ duyệt', 'Đã xác nhận', 'Đang ở');";
-        stats.TodayCheckIns = Convert.ToInt32(
-            DatabaseHelper.ExecuteScalar(sqlCheckIn, CreateParameter("@Today", today)) ?? 0);
+    var sqlCheckIn = @"
+        SELECT COUNT(*) 
+        FROM DatPhong 
+        WHERE (
+            CASE WHEN instr(NgayNhan, '/') > 0
+                 THEN substr(NgayNhan, 7, 4) || '-' || substr(NgayNhan, 4, 2) || '-' || substr(NgayNhan, 1, 2)
+                 ELSE substr(NgayNhan, 1, 10)
+            END
+        ) = @Today 
+          AND TrangThai IN ('Chờ duyệt', 'Đã xác nhận', 'Đang ở');";
+    stats.TodayCheckIns = Convert.ToInt32(
+        DatabaseHelper.ExecuteScalar(sqlCheckIn, CreateParameter("@Today", today)) ?? 0);
 
-        var sqlCheckOut = @"
-            SELECT COUNT(*) 
-            FROM DatPhong 
-            WHERE substr(NgayTra, 1, 10) = @Today 
-              AND TrangThai IN ('Đang ở', 'Đã trả phòng');";
-        stats.TodayCheckOuts = Convert.ToInt32(
-            DatabaseHelper.ExecuteScalar(sqlCheckOut, CreateParameter("@Today", today)) ?? 0);
+    var sqlCheckOut = @"
+        SELECT COUNT(*) 
+        FROM DatPhong 
+        WHERE (
+            CASE WHEN instr(NgayTra, '/') > 0
+                 THEN substr(NgayTra, 7, 4) || '-' || substr(NgayTra, 4, 2) || '-' || substr(NgayTra, 1, 2)
+                 ELSE substr(NgayTra, 1, 10)
+            END
+        ) = @Today 
+          AND TrangThai IN ('Đang ở', 'Đã trả phòng');";
+    stats.TodayCheckOuts = Convert.ToInt32(
+        DatabaseHelper.ExecuteScalar(sqlCheckOut, CreateParameter("@Today", today)) ?? 0);
 
-        var sqlNewBookings = @"
-            SELECT COUNT(*) 
-            FROM DatPhong 
-            WHERE substr(NgayNhan, 1, 10) = @Today;";
-        stats.TodayNewBookings = Convert.ToInt32(
-            DatabaseHelper.ExecuteScalar(sqlNewBookings, CreateParameter("@Today", today)) ?? 0);
+    var sqlNewBookings = @"
+        SELECT COUNT(*) 
+        FROM DatPhong 
+        WHERE (
+            CASE WHEN instr(NgayNhan, '/') > 0
+                 THEN substr(NgayNhan, 7, 4) || '-' || substr(NgayNhan, 4, 2) || '-' || substr(NgayNhan, 1, 2)
+                 ELSE substr(NgayNhan, 1, 10)
+            END
+        ) = @Today;";
+    stats.TodayNewBookings = Convert.ToInt32(
+        DatabaseHelper.ExecuteScalar(sqlNewBookings, CreateParameter("@Today", today)) ?? 0);
 
-        var sqlRevenue = "SELECT COALESCE(SUM(TongTien), 0) FROM HoaDon WHERE TrangThai = 'Đã thanh toán';";
-        var revObj = DatabaseHelper.ExecuteScalar(sqlRevenue);
-        stats.TodayRevenue = revObj != DBNull.Value && revObj != null ? Convert.ToDouble(revObj) : 0;
+    double todayRevenue = 0;
+    var countedInvoiceIds = new HashSet<int>();
 
-        return stats;
+    // 1. Lấy các giao dịch thu tiền phát sinh hôm nay trong bảng ThanhToan
+    var sqlThanhToan = @"
+        SELECT tt.MaHD AS MaHDTT, tt.SoTien, tt.NgayTT, hd.*
+        FROM ThanhToan tt
+        LEFT JOIN HoaDon hd ON tt.MaHD = hd.MaHD;";
+    var dtThanhToan = DatabaseHelper.ExecuteDataTable(sqlThanhToan);
+    foreach (DataRow r in dtThanhToan.Rows)
+    {
+        var ngayTT = r["NgayTT"]?.ToString();
+        if (!TryParseFlexibleDate(ngayTT, out var payDate) || payDate.Date != DateTime.Today)
+            continue;
+
+        double soTienTT = r["SoTien"] != DBNull.Value ? Convert.ToDouble(r["SoTien"]) : 0;
+        double tongHD = TinhTongTienChuanHoa(r);
+        todayRevenue += Math.Max(soTienTT, tongHD);
+
+        if (r["MaHDTT"] != DBNull.Value)
+            countedInvoiceIds.Add(Convert.ToInt32(r["MaHDTT"]));
     }
+
+    // 2. Cộng thêm các hóa đơn đã thanh toán hôm nay nhưng chưa ghi sang ThanhToan
+    var sqlHoaDon = @"
+        SELECT *
+        FROM HoaDon
+        WHERE TrangThai IN ('Đã thanh toán', 'Paid');";
+    var dtHoaDon = DatabaseHelper.ExecuteDataTable(sqlHoaDon);
+    foreach (DataRow r in dtHoaDon.Rows)
+    {
+        int maHD = r.Table.Columns.Contains("MaHD") && r["MaHD"] != DBNull.Value
+            ? Convert.ToInt32(r["MaHD"]) : 0;
+        if (maHD > 0 && countedInvoiceIds.Contains(maHD))
+            continue;
+
+        var ngayLap = r.Table.Columns.Contains("NgayLap") ? r["NgayLap"]?.ToString() : null;
+        if (!TryParseFlexibleDate(ngayLap, out var invDate) || invDate.Date != DateTime.Today)
+            continue;
+
+        todayRevenue += TinhTongTienChuanHoa(r);
+    }
+
+    stats.TodayRevenue = todayRevenue;
+
+    return stats;
+}
 
     // Lấy việc hôm nay (check-in, check-out, dọn phòng)
     public List<TodoItemDto> GetTodayTodoList()
     {
         var list = new List<TodoItemDto>();
-        var today = DateTime.Today.ToString("yyyy-MM-dd");
 
         var sqlCheckIn = @"
-                SELECT p.SoPhong, kh.HoTen
-                FROM DatPhong dp
-                INNER JOIN KhachHang kh ON dp.MaKH = kh.MaKH
-                INNER JOIN ChiTietDatPhong ctdp ON dp.MaDP = ctdp.MaDP
-                INNER JOIN Phong p ON ctdp.MaPhong = p.MaPhong
-                WHERE dp.TrangThai IN ('Đã xác nhận', 'Chờ duyệt')
-                AND substr(dp.NgayNhan, 1, 10) <= @Today
-            ORDER BY dp.NgayNhan ASC
-            LIMIT 10;";
-        var dtIn = DatabaseHelper.ExecuteDataTable(sqlCheckIn, CreateParameter("@Today", today));
+            SELECT DISTINCT p.SoPhong, kh.HoTen, dp.NgayNhan
+            FROM DatPhong dp
+            INNER JOIN KhachHang kh ON dp.MaKH = kh.MaKH
+            INNER JOIN ChiTietDatPhong ctdp ON dp.MaDP = ctdp.MaDP
+            INNER JOIN Phong p ON ctdp.MaPhong = p.MaPhong
+            WHERE dp.TrangThai IN ('Đã xác nhận', 'Chờ duyệt')
+            ORDER BY dp.NgayNhan ASC;";
+        var dtIn = DatabaseHelper.ExecuteDataTable(sqlCheckIn);
         foreach (DataRow r in dtIn.Rows)
             list.Add(new TodoItemDto
             {
@@ -87,14 +140,13 @@ public class ReportRepository : BaseRepository, IReportRepository
             });
 
         var sqlCheckOut = @"
-                SELECT DISTINCT p.SoPhong, kh.HoTen
-                FROM DatPhong dp
-                INNER JOIN KhachHang kh ON dp.MaKH = kh.MaKH
-                INNER JOIN ChiTietDatPhong ctdp ON dp.MaDP = ctdp.MaDP
-                INNER JOIN Phong p ON ctdp.MaPhong = p.MaPhong
-                WHERE dp.TrangThai = 'Đang ở' OR p.TrangThai = 'Có khách'
-                ORDER BY dp.NgayTra ASC
-            LIMIT 10;";
+            SELECT DISTINCT p.SoPhong, kh.HoTen, dp.NgayTra
+            FROM DatPhong dp
+            INNER JOIN KhachHang kh ON dp.MaKH = kh.MaKH
+            INNER JOIN ChiTietDatPhong ctdp ON dp.MaDP = ctdp.MaDP
+            INNER JOIN Phong p ON ctdp.MaPhong = p.MaPhong
+            WHERE dp.TrangThai = 'Đang ở'
+            ORDER BY dp.NgayTra ASC;";
         var dtOut = DatabaseHelper.ExecuteDataTable(sqlCheckOut);
         foreach (DataRow r in dtOut.Rows)
             list.Add(new TodoItemDto
@@ -302,5 +354,28 @@ public class ReportRepository : BaseRepository, IReportRepository
         string[] formats = { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "yyyy/MM/dd" };
         return DateTime.TryParseExact(s, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out date)
                || DateTime.TryParse(s, out date);
+    }
+    private static double TinhTongTienChuanHoa(DataRow r)
+    {
+        double tongTien = LayGiaTriCotSo(r, "TongTien");
+        double tienPhong = LayGiaTriCotSo(r, "TienPhong");
+        double tienDV = LayGiaTriCotSo(r, "TienDV", "TienDichVu");
+        double giamGia = LayGiaTriCotSo(r, "GiamGia");
+        double vat = LayGiaTriCotSo(r, "ThueVAT", "VAT");
+
+        double tamTinh = Math.Max(0, tienPhong + tienDV - giamGia);
+        if (vat <= 0 && tongTien > 0 && tongTien < tamTinh)
+            return tamTinh + tongTien;
+
+        return tongTien;
+    }
+    private static double LayGiaTriCotSo(DataRow r, params string[] tenCots)
+    {
+        foreach (var col in tenCots)
+        {
+            if (r.Table.Columns.Contains(col) && r[col] != DBNull.Value)
+                return Convert.ToDouble(r[col]);
+        }
+        return 0;
     }
 }

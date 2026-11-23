@@ -21,4 +21,22 @@
       <ProjectReference Include="..\Models\Models.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Update="Forms\AddServiceForm.cs">
+        <SubType>Form</SubType>
+      </Compile>
+      <Compile Update="Forms\ReceptionistMainFormcs.cs">
+        <SubType>Form</SubType>
+      </Compile>
+      <Compile Update="Forms\ReceptionistMainForm.cs">
+        <SubType>Form</SubType>
+      </Compile>
+      <Compile Update="Forms\RegisterForm.cs">
+        <SubType>Form</SubType>
+      </Compile>
+      <Compile Update="Forms\RegisterForm.cs">
+        <SubType>Form</SubType>
+      </Compile>
+    </ItemGroup>
+
 </Project>

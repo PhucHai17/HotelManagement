@@ -114,7 +114,7 @@ public partial class ReceptionistMainForm
         var pnlThongTinKhachOut = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 104,
+            Height = 124,
             BackColor = Color.FromArgb(248, 250, 252),
             Padding = new Padding(10, 8, 10, 8),
             Margin = new Padding(0, 0, 0, 10),
@@ -182,7 +182,7 @@ public partial class ReceptionistMainForm
         pnlRightCheckOut.Controls.Add(pnlThongTinKhachOut);
         pnlRightCheckOut.Controls.Add(lblTieuDeOut);
 
-        int yOut = 372;
+        int yOut = 392;
         var lblHTTT = new Label { Text = "Hình thức thanh toán", Location = new Point(18, yOut), AutoSize = true, ForeColor = Color.FromArgb(71, 85, 105) };
         cboHinhThucTT = new ComboBox { Location = new Point(18, yOut + 24), Width = 362, Height = 30, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, DropDownStyle = ComboBoxStyle.DropDownList };
         cboHinhThucTT.Items.AddRange(new object[] { "Tiền mặt / Thẻ / Chuyển khoản", "Tiền mặt", "Thẻ ngân hàng", "Chuyển khoản QR" });
@@ -212,6 +212,12 @@ public partial class ReceptionistMainForm
         tbl.Controls.Add(pnlRightCheckOut, 1, 0);
 
         pnlCheckInOut.Controls.Add(tbl);
+        
+        pnlCheckInOut.VisibleChanged += (s, e) =>
+        {
+            if (pnlCheckInOut.Visible)
+                TaiDuLieuCheckInOut();
+        };
     }
 
     private void TaiDuLieuCheckInOut()
@@ -227,7 +233,14 @@ public partial class ReceptionistMainForm
 
             if (dgvChoNhanPhong.Rows.Count > 0)
             {
+                dgvChoNhanPhong.ClearSelection();
                 dgvChoNhanPhong.Rows[0].Selected = true;
+                dgvChoNhanPhong.CurrentCell = dgvChoNhanPhong.Rows[0].Cells[0];
+                ChonDonDeCheckIn(ds[0]);
+            }
+            else
+            {
+                ChonDonDeCheckIn(null);
             }
 
             var dsDangO = _datPhongBLL.GetAll()
@@ -265,14 +278,31 @@ public partial class ReceptionistMainForm
     {
         if (dgvChoNhanPhong.CurrentRow?.Tag is Booking dp)
         {
-            _maDPDangChonCheckIn = dp.BookingId;
-            txtCheckInCCCD.Text = dp.CustomerNationalId;
-            numCheckInKhachDiCung.Value = Math.Max(0, dp.GuestCount - 1);
+            ChonDonDeCheckIn(dp);
         }
     }
+    private void ChonDonDeCheckIn(Booking? dp)
+    {
+        if (dp == null)
+        {
+            _maDPDangChonCheckIn = 0;
+            txtCheckInCCCD.Clear();
+            numCheckInKhachDiCung.Value = 0;
+            return;
+        }
 
+        _maDPDangChonCheckIn = dp.BookingId;
+        txtCheckInCCCD.Text = dp.CustomerNationalId;
+        numCheckInKhachDiCung.Value = Math.Clamp(dp.GuestCount - 1, (int)numCheckInKhachDiCung.Minimum, (int)numCheckInKhachDiCung.Maximum);
+    }
     private void XuLyXacNhanCheckIn()
     {
+        if (_maDPDangChonCheckIn <= 0 && dgvChoNhanPhong.Rows.Count > 0)
+        {
+            var dpDau = dgvChoNhanPhong.CurrentRow?.Tag as Booking ?? dgvChoNhanPhong.Rows[0].Tag as Booking;
+            ChonDonDeCheckIn(dpDau);
+        }
+
         if (_maDPDangChonCheckIn <= 0)
         {
             MessageBox.Show("Vui lòng chọn 1 đơn từ danh sách chờ nhận phòng!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -349,6 +379,7 @@ public partial class ReceptionistMainForm
                 dgvCheckOutChiTiet.Rows.Clear();
                 TaiDuLieuCheckInOut();
                 TaiDuLieuSoDoPhong();
+                TaiDuLieuTongQuan();
             }
             else
             {

@@ -88,7 +88,7 @@ public partial class ReceptionistMainForm
                 RowCount = 3,
                 Margin = new Padding(0)
             };
-            tblCenterLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 45f));
+            tblCenterLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48f));
             tblCenterLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
             tblCenterLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36f));
 
@@ -124,9 +124,10 @@ public partial class ReceptionistMainForm
                 {
                     Text = tang,
                     Width = (tang == "Tất cả" ? 68 : 46),
-                    Height = 30,
+                    Height = 34,
                     Margin = new Padding(3, 0, 3, 0),
-                    Cursor = Cursors.Hand
+                    Cursor = Cursors.Hand,
+                    UseMnemonic = false
                 };
                 UIHelper.DinhDangNutBamPhu(btnTang);
                 btnTang.Click += (s, e) =>
@@ -276,6 +277,7 @@ public partial class ReceptionistMainForm
             tblBody.Controls.Add(pnlRightCheckIn, 1, 0);
             tblRootSoDo.Controls.Add(tblBody, 0, 1);
             pnlSoDoPhong.Controls.Add(tblRootSoDo);
+            pnlSoDoPhong.VisibleChanged += (s, e) => { if (pnlSoDoPhong.Visible) TaiDuLieuSoDoPhong(); };
         }
 
         private void ThemNhanVaInput(Panel p, string nhan, int y, out TextBox txt)
@@ -323,16 +325,11 @@ public partial class ReceptionistMainForm
                 tblLướiPhong.Controls.Clear();
                 tblLướiPhong.RowStyles.Clear();
 
-                List<Room> ds;
-                if (_tangHienTai == 0)
-                {
-                    // 12 phòng tầng 1 và 2 (101-106, 201-206)
-                    ds = _phongBLL.GetAll().FindAll(p => p.Floor == 1 || p.Floor == 2);
-                }
-                else
-                {
-                    ds = _phongBLL.GetByFloor(_tangHienTai);
-                }
+                List<Room> ds = _tangHienTai == 0
+                    ? _phongBLL.GetAll()
+                    : _phongBLL.GetByFloor(_tangHienTai);
+
+                ds.Sort((a, b) => string.Compare(a.RoomNumber, b.RoomNumber, StringComparison.Ordinal));
 
                 int soDong = (int)Math.Ceiling(ds.Count / 4.0);
                 tblLướiPhong.RowCount = soDong + 1;

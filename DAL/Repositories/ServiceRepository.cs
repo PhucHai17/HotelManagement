@@ -201,4 +201,17 @@ public class ServiceRepository : BaseRepository ,IServiceRepository
         }
         return list;
     }
+    public bool Insert(Service dv)
+    {
+        const string sql = @"
+        INSERT INTO DichVu (TenDV, DonGia, DonVi)
+        VALUES (@TenDV, @DonGia, @DonVi);";
+
+        int rows = DatabaseHelper.ExecuteNonQuery(sql,
+            CreateParameter("@TenDV", dv.Name),
+            CreateParameter("@DonGia", dv.UnitPrice),
+            CreateParameter("@DonVi", dv.Unit));
+
+        return rows > 0;
+    }
 }

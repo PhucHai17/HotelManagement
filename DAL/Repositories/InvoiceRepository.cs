@@ -59,27 +59,42 @@ public class InvoiceRepository : BaseRepository, IInvoiceRepository
         return Convert.ToInt32(id ?? 0);
     }
 
-    // Thanh toán hóa đơn & lưu giao dịch
+    // Thanh toán hóa đơn và lưu giao dịch
     public bool PayInvoice(int invoiceId, string paymentMethod)
     {
-        var invoice = GetById(invoiceId);
-
-        if (invoice == null)
-            return false;
-
         var sqlHD = @"
             UPDATE HoaDon
-            SET TrangThai = @TrangThai
+            SET TrangThai = @TrangThai,
+                VAT = CASE 
+                    WHEN COALESCE(VAT, 0) <= 0 AND TongTien > 0 
+                         AND TongTien < (COALESCE(TienPhong, 0) + COALESCE(TienDV, 0) - COALESCE(GiamGia, 0))
+                    THEN TongTien 
+                    ELSE VAT 
+                END,
+                TongTien = CASE 
+                    WHEN COALESCE(VAT, 0) <= 0 AND TongTien > 0 
+                         AND TongTien < (COALESCE(TienPhong, 0) + COALESCE(TienDV, 0) - COALESCE(GiamGia, 0))
+                    THEN (COALESCE(TienPhong, 0) + COALESCE(TienDV, 0) - COALESCE(GiamGia, 0)) + TongTien
+                    ELSE TongTien 
+                END,
+                NgayLap = @NgayLap
             WHERE MaHD = @MaHD;";
 
         var result = DatabaseHelper.ExecuteNonQuery(
             sqlHD,
             CreateParameter("@TrangThai", InvoiceStatus.Paid.ToString()),
+            CreateParameter("@NgayLap", DateTime.Now.ToString("yyyy-MM-dd HH:mm")),
             CreateParameter("@MaHD", invoiceId)
         );
 
         if (result <= 0)
             return false;
+
+        var tongTienObj = DatabaseHelper.ExecuteScalar(
+            "SELECT TongTien FROM HoaDon WHERE MaHD = @MaHD;",
+            CreateParameter("@MaHD", invoiceId));
+        double soTienThucTe = tongTienObj != null && tongTienObj != DBNull.Value
+            ? Convert.ToDouble(tongTienObj) : 0;
 
         var sqlTT = @"
             INSERT INTO ThanhToan
@@ -90,7 +105,7 @@ public class InvoiceRepository : BaseRepository, IInvoiceRepository
         DatabaseHelper.ExecuteNonQuery(
             sqlTT,
             CreateParameter("@MaHD", invoiceId),
-            CreateParameter("@SoTien", invoice.TotalAmount),
+            CreateParameter("@SoTien", soTienThucTe),
             CreateParameter("@HinhThuc", paymentMethod),
             CreateParameter("@LoaiGD", "Thanh toán hóa đơn"),
             CreateParameter("@NgayTT", DateTime.Now.ToString("dd/MM/yyyy HH:mm"))

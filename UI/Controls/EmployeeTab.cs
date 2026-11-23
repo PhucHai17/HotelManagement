@@ -6,7 +6,7 @@ using UI.Forms;
 
 namespace UI.Controls;
 
-public class EmployeeTab : UserControl
+public class  EmployeeTab : UserControl
 {
     private TextBox txtSearch = null!;
     private DataGridView dgvEmployees = null!;

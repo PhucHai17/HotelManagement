@@ -11,4 +11,5 @@ public interface IHotelService
     List<BookingDetail> GetCustomerBookingDetailsForService(int customerId);
     List<ServiceUsage> GetServiceUsagesByBookingId(int bookingId);
     List<ServiceUsage> GetServiceUsagesByCustomerId(int customerId);
+    bool SaveService(Service dv, out string s);
 }

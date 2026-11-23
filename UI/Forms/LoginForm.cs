@@ -42,20 +42,20 @@ public class LoginForm : Form
             "Khách sạn tiện nghi - Dịch vụ tận tâm",
             formWidth);
 
-        // Tiêu đề form (giãn cách thoáng trước trường nhập đầu tiên)
+        // Tiêu đề form
         var lblHeader = AuthLayoutHelper.CreateHeaderLabel("Đăng nhập", bottomMargin: 22);
         flowForm.Controls.Add(lblHeader);
 
-        // Ô nhập tên đăng nhập / Email (38px bo góc)
+        // Email
         var pnlTen = AuthLayoutHelper.CreateLabeledInput(
-            "Tên đăng nhập / Email",
+            "Email",
             formWidth,
             out txtTenDangNhap,
-            placeholder: "Nhập tên tài khoản hoặc email...",
+            placeholder: "Nhập email...",
             bottomMargin: 16);
         flowForm.Controls.Add(pnlTen);
 
-        // Ô nhập mật khẩu (38px bo góc)
+        // Ô nhập mật khẩu
         var pnlMK = AuthLayoutHelper.CreateLabeledInput(
             "Mật khẩu",
             formWidth,
@@ -194,7 +194,6 @@ public class LoginForm : Form
 
     private static Button TaoNutVaiTro(string text, int rightMargin)
     {
-        // Dùng AutoSize để chữ "Khách hàng", "Lễ tân", "Quản lý" luôn hiển thị đủ
         var btn = new Button
         {
             Text = text,
@@ -220,18 +219,12 @@ public class LoginForm : Form
         switch (vaiTro)
         {
             case "Khách hàng":
-                txtTenDangNhap.Text = "khach1";
-                txtMatKhau.Text = "123456";
                 btnChon = btnVaiTroKhach;
                 break;
             case "Quản lý":
-                txtTenDangNhap.Text = "quanly";
-                txtMatKhau.Text = "123456";
                 btnChon = btnVaiTroQuanLy;
                 break;
             default:
-                txtTenDangNhap.Text = "letan1";
-                txtMatKhau.Text = "123456";
                 btnChon = btnVaiTroLeTan;
                 break;
         }
