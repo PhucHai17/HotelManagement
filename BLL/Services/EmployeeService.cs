@@ -26,22 +26,33 @@ public class EmployeeService : IEmployeeService
         _logRepo = logRepo ?? throw new ArgumentNullException(nameof(logRepo));
     }
 
-    // Kiểm tra quyền quản lý nhân viên
+    // Kiểm tra người dùng có vai trò Quản lý hoặc Quản trị viên
+    private static bool IsManagerOrAdmin()
+    {
+        var roleId = SessionManager.CurrentUser?.RoleId;
+        return roleId == AppConstants.MaVTQuanLy || roleId == AppConstants.MaVTAdmin;
+    }
+    
     private static bool HasManagePermission(out string message)
     {
+        if (IsManagerOrAdmin())
+        {
+            message = string.Empty;
+            return true;
+        }
+
         return SessionManager.CheckPermission(
             out message,
             "Bạn không có quyền quản lý nhân viên!",
             AppConstants.QuyenQuanLyNhanVien);
     }
-
-    // Kiểm tra người dùng hiện tại có quyền Quản trị hệ thống (Admin) hay không
+    
     private static bool IsSystemAdmin()
     {
-        return SessionManager.HasPermission(AppConstants.QuyenQuanTriHeThong);
+        var roleId = SessionManager.CurrentUser?.RoleId;
+        return roleId == AppConstants.MaVTAdmin || SessionManager.HasPermission(AppConstants.QuyenQuanTriHeThong);
     }
-
-    // Kiểm tra dữ liệu chung của nhân viên (Họ tên, SĐT, CCCD 12 số)
+    
     private static bool ValidateEmployeeInfo(Employee employee, out string message)
     {
         if (string.IsNullOrWhiteSpace(employee.FullName))
@@ -72,37 +83,51 @@ public class EmployeeService : IEmployeeService
         message = string.Empty;
         return true;
     }
-
-    // Lấy toàn bộ danh sách nhân viên
+    
+    public static bool IsValidEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return false;
+        var trimmed = email.Trim();
+        if (trimmed.Contains(' ')) return false;
+        var atIndex = trimmed.IndexOf('@');
+        var dotIndex = trimmed.LastIndexOf('.');
+        return atIndex > 0 && dotIndex > atIndex + 1 && dotIndex < trimmed.Length - 1;
+    }
+    
     public List<Employee> GetAll()
     {
-        SessionManager.EnsureAnyPermission("Bạn không có quyền xem danh sách nhân viên!", AppConstants.QuyenQuanLyNhanVien);
+        if (!IsManagerOrAdmin())
+        {
+            SessionManager.EnsureAnyPermission("Bạn không có quyền xem danh sách nhân viên!", AppConstants.QuyenQuanLyNhanVien);
+        }
         return _employeeRepo.GetAll();
     }
 
     // Tìm kiếm nhân viên theo từ khóa
     public List<Employee> Search(string keyword)
     {
-        SessionManager.EnsureAnyPermission("Bạn không có quyền tìm kiếm nhân viên!", AppConstants.QuyenQuanLyNhanVien);
+        if (!IsManagerOrAdmin())
+        {
+            SessionManager.EnsureAnyPermission("Bạn không có quyền tìm kiếm nhân viên!", AppConstants.QuyenQuanLyNhanVien);
+        }
         return _employeeRepo.Search(keyword);
     }
-
-    // Thêm nhân viên mới kèm tài khoản đã băm mật khẩu SHA-256
+    
     public bool AddEmployee(Employee employee, string username, string password, int roleId, out string message)
     {
         if (!HasManagePermission(out message)) return false;
         if (!ValidateEmployeeInfo(employee, out message)) return false;
 
-        var cleanUser = (username ?? string.Empty).Trim();
-        if (cleanUser.Length < 3 || cleanUser.Contains(' '))
+        var cleanEmail = (username ?? string.Empty).Trim();
+        if (!IsValidEmail(cleanEmail))
         {
-            message = "Tên đăng nhập phải từ 3 ký tự trở lên và không chứa khoảng trắng!";
+            message = "Email không hợp lệ (phải chứa ký tự '@' và dấu '.')!";
             return false;
         }
 
-        if (_accountRepo.Exists(cleanUser))
+        if (_accountRepo.Exists(cleanEmail))
         {
-            message = "Tên đăng nhập đã tồn tại trong hệ thống!";
+            message = "Email này đã được sử dụng cho tài khoản khác trong hệ thống!";
             return false;
         }
 
@@ -112,23 +137,12 @@ public class EmployeeService : IEmployeeService
             return false;
         }
 
-        if (roleId != AppConstants.MaVTLeTan && roleId != AppConstants.MaVTQuanLy && roleId != AppConstants.MaVTAdmin)
-        {
-            message = "Vai trò nhân viên không hợp lệ!";
-            return false;
-        }
-
-        // Chỉ Admin (có quyền QuanTriHeThong) mới được tạo tài khoản vai trò Admin
-        if (roleId == AppConstants.MaVTAdmin && !IsSystemAdmin())
-        {
-            message = "Chỉ Quản trị viên (Admin) mới có quyền tạo tài khoản vai trò Quản trị viên!";
-            return false;
-        }
+        var assignedRoleId = AppConstants.MaVTLeTan;
 
         var account = new Account
         {
-            RoleId = roleId,
-            Username = cleanUser,
+            RoleId = assignedRoleId,
+            Username = cleanEmail,
             PasswordHash = PasswordHelper.HashPassword(password),
             Status = AppConstants.AccountStatusActive
         };
@@ -144,10 +158,17 @@ public class EmployeeService : IEmployeeService
         {
             if (SessionManager.CurrentUser != null)
             {
-                _logRepo.LogAction(
-                    SessionManager.CurrentUser.AccountId,
-                    $"Thêm nhân viên mới: {employee.FullName} ({cleanUser})",
-                    "NhanVien");
+                try
+                {
+                    _logRepo.LogAction(
+                        SessionManager.CurrentUser.AccountId,
+                        $"Thêm nhân viên mới: {employee.FullName} ({cleanEmail})",
+                        "NhanVien");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error(ex, "Ghi nhật ký thêm nhân viên mới");
+                }
             }
             message = "Thêm nhân viên thành công!";
             return true;
@@ -160,6 +181,12 @@ public class EmployeeService : IEmployeeService
     // Cập nhật thông tin nhân viên
     public bool UpdateEmployee(Employee employee, int roleId, out string message)
     {
+        return UpdateEmployee(employee, roleId, null, out message);
+    }
+
+    // Cập nhật thông tin nhân viên kèm mật khẩu tùy chọn
+    public bool UpdateEmployee(Employee employee, int roleId, string? newPassword, out string message)
+    {
         if (!HasManagePermission(out message)) return false;
         if (!ValidateEmployeeInfo(employee, out message)) return false;
 
@@ -170,29 +197,63 @@ public class EmployeeService : IEmployeeService
             return false;
         }
 
-        if (roleId != AppConstants.MaVTLeTan && roleId != AppConstants.MaVTQuanLy && roleId != AppConstants.MaVTAdmin)
+        var cleanEmail = employee.Account?.Username?.Trim();
+        if (!string.IsNullOrWhiteSpace(cleanEmail))
         {
-            message = "Vai trò nhân viên không hợp lệ!";
-            return false;
+            if (!IsValidEmail(cleanEmail))
+            {
+                message = "Email không hợp lệ (phải chứa ký tự '@' và dấu '.')!";
+                return false;
+            }
+
+            if (!string.Equals(cleanEmail, existing.Account?.Username, StringComparison.OrdinalIgnoreCase))
+            {
+                if (_accountRepo.Exists(cleanEmail))
+                {
+                    message = "Email này đã được sử dụng bởi tài khoản khác trong hệ thống!";
+                    return false;
+                }
+            }
+
+            if (employee.Account != null)
+            {
+                employee.Account.Username = cleanEmail;
+            }
         }
 
-        // Quản lý không được chỉnh sửa hoặc gán vai trò Admin
-        if (!IsSystemAdmin() && (existing.Account?.RoleId == AppConstants.MaVTAdmin || roleId == AppConstants.MaVTAdmin))
+        string? newPasswordHash = null;
+        if (!string.IsNullOrWhiteSpace(newPassword))
+        {
+            var cleanPwd = newPassword.Trim();
+            if (cleanPwd.Length < 6)
+            {
+                message = "Mật khẩu mới phải từ 6 ký tự trở lên!";
+                return false;
+            }
+
+            newPasswordHash = PasswordHelper.HashPassword(cleanPwd);
+            employee.Account ??= new Account();
+            employee.Account.PasswordHash = newPasswordHash;
+        }
+
+        var targetRoleId = (existing.Account?.RoleId == AppConstants.MaVTLeTan)
+            ? AppConstants.MaVTLeTan
+            : roleId;
+
+        if (!IsSystemAdmin() && (existing.Account?.RoleId == AppConstants.MaVTAdmin || targetRoleId == AppConstants.MaVTAdmin))
         {
             message = "Quản lý không có quyền thao tác hoặc gán vai trò Quản trị viên (Admin)!";
             return false;
         }
 
-        // Không cho phép tự thay đổi vai trò của chính mình
-        if (existing.AccountId == SessionManager.CurrentUser?.AccountId && roleId != existing.Account?.RoleId)
+        if (existing.AccountId == SessionManager.CurrentUser?.AccountId && targetRoleId != existing.Account?.RoleId)
         {
             message = "Không thể tự thay đổi vai trò của chính mình!";
             return false;
         }
 
-        // Không cho phép hạ vai trò của Admin cuối cùng đang hoạt động
         if (existing.Account?.RoleId == AppConstants.MaVTAdmin
-            && roleId != AppConstants.MaVTAdmin
+            && targetRoleId != AppConstants.MaVTAdmin
             && !AccountStatusHelper.IsLocked(existing.Account?.Status)
             && _employeeRepo.CountActiveAdmins() <= 1)
         {
@@ -201,15 +262,27 @@ public class EmployeeService : IEmployeeService
         }
 
         employee.AccountId = existing.AccountId;
-        var ok = _employeeRepo.UpdateEmployee(employee, roleId);
+        var ok = (_employeeRepo as EmployeeRepository)?.UpdateEmployee(employee, targetRoleId, newPasswordHash)
+                 ?? _employeeRepo.UpdateEmployee(employee, targetRoleId);
         if (ok)
         {
             if (SessionManager.CurrentUser != null)
             {
-                _logRepo.LogAction(
-                    SessionManager.CurrentUser.AccountId,
-                    $"Cập nhật nhân viên: {employee.FullName} (NV{employee.EmployeeId:D3})",
-                    "NhanVien");
+                try
+                {
+                    var logMoTa = !string.IsNullOrWhiteSpace(newPassword)
+                        ? $"Cập nhật nhân viên và đổi mật khẩu: {employee.FullName} (NV{employee.EmployeeId:D3})"
+                        : $"Cập nhật nhân viên: {employee.FullName} (NV{employee.EmployeeId:D3})";
+
+                    _logRepo.LogAction(
+                        SessionManager.CurrentUser.AccountId,
+                        logMoTa,
+                        "NhanVien");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error(ex, "Ghi nhật ký cập nhật nhân viên");
+                }
             }
             message = "Cập nhật thông tin nhân viên thành công!";
             return true;
@@ -237,7 +310,6 @@ public class EmployeeService : IEmployeeService
             return false;
         }
 
-        // Quản lý không được khóa hoặc mở khóa tài khoản Admin
         if (emp.Account?.RoleId == AppConstants.MaVTAdmin && !IsSystemAdmin())
         {
             message = "Quản lý không có quyền khóa hoặc mở khóa tài khoản Quản trị viên (Admin)!";
@@ -246,7 +318,6 @@ public class EmployeeService : IEmployeeService
 
         var isCurrentlyLocked = AccountStatusHelper.IsLocked(emp.Account?.Status);
 
-        // Không cho phép khóa Admin cuối cùng đang hoạt động
         if (!isCurrentlyLocked
             && emp.Account?.RoleId == AppConstants.MaVTAdmin
             && _employeeRepo.CountActiveAdmins() <= 1)
@@ -265,10 +336,17 @@ public class EmployeeService : IEmployeeService
         {
             if (SessionManager.CurrentUser != null)
             {
-                _logRepo.LogAction(
-                    SessionManager.CurrentUser.AccountId,
-                    $"{actionText} tài khoản nhân viên: {displayUsername} ({emp.FullName})",
-                    "TaiKhoan");
+                try
+                {
+                    _logRepo.LogAction(
+                        SessionManager.CurrentUser.AccountId,
+                        $"{actionText} tài khoản nhân viên: {displayUsername} ({emp.FullName})",
+                        "TaiKhoan");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error(ex, "Ghi nhật ký đổi trạng thái tài khoản nhân viên");
+                }
             }
             message = $"Đã {actionText.ToLowerInvariant()} tài khoản {displayUsername}!";
             return true;

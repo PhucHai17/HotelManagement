@@ -1,13 +1,13 @@
 namespace DAL.Repositories;
 
-public class EmployeeRepository :BaseRepository ,IEmployeeRepository
+public class EmployeeRepository : BaseRepository, IEmployeeRepository
 {
     private const string BaseSelectSql = @"
         SELECT nv.*, tk.MaVT, tk.TenDangNhap, tk.TrangThai AS TaiKhoanTrangThai, vt.TenVT
         FROM NhanVien nv
         LEFT JOIN TaiKhoan tk ON nv.MaTK = tk.MaTK
         LEFT JOIN VaiTro vt ON tk.MaVT = vt.MaVT";
-    // Lấy nhân viên theo mã tài khoản đăng nhập
+    
     public List<Employee> GetAll()
     {
         var sql = $"{BaseSelectSql} ORDER BY nv.MaNV DESC;";
@@ -20,20 +20,24 @@ public class EmployeeRepository :BaseRepository ,IEmployeeRepository
         return list;
     }
 
+    // Tìm kiếm nhân viên theo họ tên, sđt, cccd hoặc email bắt đầu bằng từ khóa
     public List<Employee> Search(string keyword)
     {
         if (string.IsNullOrWhiteSpace(keyword))
             return GetAll();
 
+        var cleanKeyword = keyword.Trim();
         var sql = $@"
             {BaseSelectSql}
-            WHERE LOWER(nv.HoTen) LIKE LOWER(@Keyword)
-               OR nv.SDT LIKE @Keyword
-               OR nv.CCCD LIKE @Keyword
-               OR LOWER(tk.TenDangNhap) LIKE LOWER(@Keyword)
+            WHERE LOWER(nv.HoTen) LIKE LOWER(@ContainsKeyword)
+               OR nv.SDT LIKE @ContainsKeyword
+               OR nv.CCCD LIKE @ContainsKeyword
+               OR LOWER(tk.TenDangNhap) LIKE LOWER(@PrefixKeyword)
             ORDER BY nv.MaNV DESC;";
 
-        var table = DatabaseHelper.ExecuteDataTable(sql, CreateParameter("@Keyword", $"%{keyword.Trim()}%"));
+        var table = DatabaseHelper.ExecuteDataTable(sql,
+            CreateParameter("@ContainsKeyword", $"%{cleanKeyword}%"),
+            CreateParameter("@PrefixKeyword", $"{cleanKeyword}%"));
         var list = new List<Employee>();
         foreach (DataRow row in table.Rows)
         {
@@ -41,22 +45,21 @@ public class EmployeeRepository :BaseRepository ,IEmployeeRepository
         }
         return list;
     }
-
+    
     public Employee? GetByAccountId(int accountId)
     {
         var sql = $"{BaseSelectSql} WHERE nv.MaTK = @MaTK LIMIT 1;";
         var table = DatabaseHelper.ExecuteDataTable(sql, CreateParameter("@MaTK", accountId));
         return table.Rows.Count > 0 ? MapRow(table.Rows[0]) : null;
     }
-
-    // Lấy nhân viên theo mã nhân viên
+    
     public Employee? GetById(int employeeId)
     {
         var sql = $"{BaseSelectSql} WHERE nv.MaNV = @MaNV LIMIT 1;";
         var table = DatabaseHelper.ExecuteDataTable(sql, CreateParameter("@MaNV", employeeId));
         return table.Rows.Count > 0 ? MapRow(table.Rows[0]) : null;
     }
-
+    
     public int CreateEmployeeWithAccount(Employee employee, Account account)
     {
         using var connection = DBConnection.CreateConnection();
@@ -65,7 +68,6 @@ public class EmployeeRepository :BaseRepository ,IEmployeeRepository
 
         try
         {
-            // 1. Tạo tài khoản trước
             int newAccountId;
             using (var cmdAcc = connection.CreateCommand())
             {
@@ -92,7 +94,6 @@ public class EmployeeRepository :BaseRepository ,IEmployeeRepository
                 return 0;
             }
 
-            // 2. Tạo hồ sơ nhân viên gắn với MaTK vừa tạo
             int newEmployeeId;
             using (var cmdEmp = connection.CreateCommand())
             {
@@ -123,8 +124,13 @@ public class EmployeeRepository :BaseRepository ,IEmployeeRepository
             throw;
         }
     }
-
+    
     public bool UpdateEmployee(Employee employee, int roleId)
+    {
+        return UpdateEmployee(employee, roleId, null);
+    }
+    
+    public bool UpdateEmployee(Employee employee, int roleId, string? newPasswordHash)
     {
         using var connection = DBConnection.CreateConnection();
         connection.Open();
@@ -155,9 +161,28 @@ public class EmployeeRepository :BaseRepository ,IEmployeeRepository
             {
                 using var cmdAcc = connection.CreateCommand();
                 cmdAcc.Transaction = transaction;
-                cmdAcc.CommandText = "UPDATE TaiKhoan SET MaVT = @MaVT WHERE MaTK = @MaTK;";
+                var newUsername = employee.Account?.Username?.Trim();
+                var pwdHash = !string.IsNullOrWhiteSpace(newPasswordHash)
+                    ? newPasswordHash
+                    : employee.Account?.PasswordHash;
+
+                var updates = new List<string> { "MaVT = @MaVT" };
                 cmdAcc.Parameters.AddWithValue("@MaVT", roleId);
                 cmdAcc.Parameters.AddWithValue("@MaTK", employee.AccountId);
+
+                if (!string.IsNullOrWhiteSpace(newUsername))
+                {
+                    updates.Add("TenDangNhap = @TenDangNhap");
+                    cmdAcc.Parameters.AddWithValue("@TenDangNhap", newUsername);
+                }
+
+                if (!string.IsNullOrWhiteSpace(pwdHash))
+                {
+                    updates.Add("MatKhauHash = @MatKhauHash");
+                    cmdAcc.Parameters.AddWithValue("@MatKhauHash", pwdHash);
+                }
+
+                cmdAcc.CommandText = $"UPDATE TaiKhoan SET {string.Join(", ", updates)} WHERE MaTK = @MaTK;";
                 cmdAcc.ExecuteNonQuery();
             }
 
@@ -171,6 +196,7 @@ public class EmployeeRepository :BaseRepository ,IEmployeeRepository
         }
     }
 
+    // Cập nhật trạng thái khóa hoặc mở khóa tài khoản và hồ sơ nhân viên
     public bool SetAccountLockStatus(int accountId, string accountStatus, string employeeStatus)
     {
         using var connection = DBConnection.CreateConnection();
@@ -206,7 +232,7 @@ public class EmployeeRepository :BaseRepository ,IEmployeeRepository
             throw;
         }
     }
-
+    
     public int CountActiveAdmins()
     {
         var sql = $@"
@@ -220,7 +246,6 @@ public class EmployeeRepository :BaseRepository ,IEmployeeRepository
         return result != null ? Convert.ToInt32(result) : 0;
     }
 
-    // Chuyển DataRow thành Employee
     private Employee MapRow(DataRow row)
     {
         var accountId = GetValue<int>(row, "MaTK");
@@ -248,7 +273,8 @@ public class EmployeeRepository :BaseRepository ,IEmployeeRepository
             NationalId = GetValue<string>(row, "CCCD", ""),
             Position = GetValue<string>(row, "ChucVu", "Lễ tân"),
             HireDate = GetValue<string>(row, "NgayVaoLam", ""),
-            Status = GetValue<string>(row, "TrangThai", "Đang làm việc")
+            Status = GetValue<string>(row, "TrangThai", "Đang làm việc"),
+            Account = account
         };
     }
 }

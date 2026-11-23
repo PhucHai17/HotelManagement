@@ -1,21 +1,22 @@
 using Common.Constants;
 using Common.Helpers;
+using UI.Controls;
 
 namespace UI.Forms;
 
-// Giao diện chính của Quản lý và Quản trị viên
 public class ManagerMainForm : ReceptionistMainForm
 {
     private Panel pnlNhanVien = null!;
     private Panel pnlNhatKy = null!;
-
+    private EmployeeTab _employeeTab = null!;
+    
     protected override string LayTieuDeForm()
     {
         return SessionManager.CurrentUser?.RoleId == AppConstants.MaVTAdmin
             ? "HotelPro - Giao diện Quản trị viên"
             : "HotelPro - Giao diện Quản lý";
     }
-
+    
     protected override string LayNhanVaiTroSidebar()
     {
         return SessionManager.CurrentUser?.RoleId == AppConstants.MaVTAdmin
@@ -53,6 +54,7 @@ public class ManagerMainForm : ReceptionistMainForm
                 if (pnlNhanVien != null)
                 {
                     ChuyenTab(pnlNhanVien, "Nhân viên");
+                    _employeeTab?.LoadEmployees();
                     return true;
                 }
                 return false;
@@ -74,6 +76,9 @@ public class ManagerMainForm : ReceptionistMainForm
         pnlNhanVien = TaoKhungTabCoBan(
             "QUẢN LÝ NHÂN VIÊN",
             "Phân quyền tài khoản, quản lý hồ sơ nhân sự và phân ca làm việc");
+        _employeeTab = new EmployeeTab { Dock = DockStyle.Fill };
+        pnlNhanVien.Controls.Add(_employeeTab);
+        _employeeTab.BringToFront();
         pnlMainContent.Controls.Add(pnlNhanVien);
     }
 
