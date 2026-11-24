@@ -6,5 +6,6 @@ public interface IReportRepository
     DashboardStatsDto GetDashboardStats();
     List<TodoItemDto> GetTodayTodoList();
     Dictionary<string, double> Get7DayOccupancyRate();
-    List<RevenueReportDto> GetMonthlyRevenue(int year);
+    List<RevenueReportDto> GetMonthlyRevenue(int year, int? employeeId = null);
+    List<RevenueReportDto> GetDailyRevenue(DateTime fromDate, DateTime toDate , int? employeeId = null);
 }

@@ -42,8 +42,11 @@ public class ReportService : IReportService
     // Lấy doanh thu theo tháng (yêu cầu quyền XemBaoCao)
     public List<RevenueReportDto> GetMonthlyRevenue(int year)
     {
-        SessionManager.EnsureAnyPermission("Bạn không có quyền xem báo cáo doanh thu!", AppConstants.QuyenXemBaoCao);
-        return _reportRepo.GetMonthlyRevenue(year);
+        SessionManager.EnsureAnyPermission("Bạn không có quyền xem báo cáo doanh thu!",
+            AppConstants.QuyenXemBaoCao,
+            AppConstants.QuyenQuanLyPhong,
+            AppConstants.QuyenQuanLyDatPhong);
+        return _reportRepo.GetMonthlyRevenue(year , LayMaNhanVienLocBaoCao());
     }
 
     // Lấy việc cần làm hôm nay
@@ -95,5 +98,23 @@ public class ReportService : IReportService
             message = $"Lỗi khi xuất file: {ex.Message}";
             return false;
         }
+    }
+
+    public List<RevenueReportDto> GetDailyRevenue(DateTime fromDate, DateTime toDate)
+    {
+        SessionManager.EnsureAnyPermission(
+            "Bạn không có quyền xem báo cáo doanh thu!",
+            AppConstants.QuyenXemBaoCao,
+            AppConstants.QuyenQuanLyPhong,
+            AppConstants.QuyenQuanLyDatPhong);
+        return _reportRepo.GetDailyRevenue(fromDate, toDate , LayMaNhanVienLocBaoCao());
+    }
+    private static int? LayMaNhanVienLocBaoCao()
+    {
+        var roleId = SessionManager.CurrentUser?.RoleId;
+        if (roleId == AppConstants.MaVTQuanLy || roleId == AppConstants.MaVTAdmin)
+            return null;
+
+        return SessionManager.CurrentEmployee?.EmployeeId ?? -1;
     }
 }

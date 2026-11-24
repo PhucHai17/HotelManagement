@@ -8,4 +8,6 @@ public interface IReportService
     List<RevenueReportDto> GetMonthlyRevenue(int year);
     List<TodoItemDto> GetTodayTodoList();
     bool ExportRevenueReportToExcel(string filePath, List<RevenueReportDto> reportList, out string message);
+    public List<RevenueReportDto> GetDailyRevenue(DateTime fromDate, DateTime toDate);
+
 }

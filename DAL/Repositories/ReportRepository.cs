@@ -223,128 +223,213 @@ public class ReportRepository : BaseRepository, IReportRepository
     }
 
     // Thống kê doanh thu theo tháng thực tế từ cơ sở dữ liệu
-    public List<RevenueReportDto> GetMonthlyRevenue(int year)
+    public List<RevenueReportDto> GetMonthlyRevenue(int year , int? employeeId = null)
     {
-        var result = new List<RevenueReportDto>();
-        var currentYear = DateTime.Today.Year;
-        var maxMonth = (year < currentYear) ? 12 : (year == currentYear ? DateTime.Today.Month : 0);
-        if (maxMonth <= 0) return result;
+        // 1. Lấy doanh thu cả năm trong 1 lần gọi để khớp 100% với báo cáo ngày
+        var dsNgayCaNam = GetDailyRevenue(new DateTime(year, 1, 1), new DateTime(year, 12, 31), employeeId);
+        var doanhThuTheoThang = new double[13];
+        var luotKhachTheoThang = new int[13];
 
-        var sqlRevenue = @"
-            SELECT 
-                CASE 
-                    WHEN instr(NgayLap, '/') > 0 THEN CAST(substr(NgayLap, 4, 2) AS INT)
-                    ELSE CAST(substr(NgayLap, 6, 2) AS INT)
-                END AS Thang,
-                COALESCE(SUM(TongTien), 0) AS DoanhThu
-            FROM HoaDon
-            WHERE (TrangThai = 'Đã thanh toán' OR TrangThai = 'Paid')
-              AND (
-                  CASE 
-                      WHEN instr(NgayLap, '/') > 0 THEN CAST(substr(NgayLap, 7, 4) AS INT)
-                      ELSE CAST(substr(NgayLap, 1, 4) AS INT)
-                  END
-              ) = @Nam
-            GROUP BY Thang;";
-
-        var revenueByMonth = new Dictionary<int, double>();
-        var dtRevenue = DatabaseHelper.ExecuteDataTable(sqlRevenue, CreateParameter("@Nam", year));
-        foreach (DataRow r in dtRevenue.Rows)
+        foreach (var item in dsNgayCaNam)
         {
-            var thang = Convert.ToInt32(r["Thang"]);
-            revenueByMonth[thang] = Convert.ToDouble(r["DoanhThu"]);
-        }
-
-        var sqlGuests = @"
-            SELECT 
-                CASE 
-                    WHEN instr(dp.NgayNhan, '/') > 0 THEN CAST(substr(dp.NgayNhan, 4, 2) AS INT)
-                    ELSE CAST(substr(dp.NgayNhan, 6, 2) AS INT)
-                END AS Thang,
-                COALESCE(SUM(COALESCE(dp.SoKhach, 1)), 0) AS TongKhach
-            FROM DatPhong dp
-            WHERE dp.TrangThai NOT IN ('Đã hủy', 'Cancelled')
-              AND (
-                  CASE 
-                      WHEN instr(dp.NgayNhan, '/') > 0 THEN CAST(substr(dp.NgayNhan, 7, 4) AS INT)
-                      ELSE CAST(substr(dp.NgayNhan, 1, 4) AS INT)
-                  END
-              ) = @Nam
-            GROUP BY Thang;";
-
-        var guestsByMonth = new Dictionary<int, int>();
-        var dtGuests = DatabaseHelper.ExecuteDataTable(sqlGuests, CreateParameter("@Nam", year));
-        foreach (DataRow r in dtGuests.Rows)
-        {
-            var thang = Convert.ToInt32(r["Thang"]);
-            guestsByMonth[thang] = Convert.ToInt32(r["TongKhach"]);
-        }
-
-        var totalRooms = Convert.ToInt32(DatabaseHelper.ExecuteScalar("SELECT COUNT(*) FROM Phong;") ?? 0);
-        if (totalRooms <= 0) totalRooms = 1;
-
-        var sqlBookings = @"
-            SELECT dp.MaDP, dp.NgayNhan, dp.NgayTra, COALESCE(dp.SoKhach, 1) AS SoKhach,
-                   COUNT(DISTINCT ctdp.MaPhong) AS SoPhong
-            FROM DatPhong dp
-            LEFT JOIN ChiTietDatPhong ctdp ON dp.MaDP = ctdp.MaDP
-            WHERE dp.TrangThai NOT IN ('Đã hủy', 'Cancelled')
-            GROUP BY dp.MaDP, dp.NgayNhan, dp.NgayTra, dp.SoKhach;";
-
-        var dtBookings = DatabaseHelper.ExecuteDataTable(sqlBookings);
-
-        for (var m = 1; m <= maxMonth; m++)
-        {
-            var startOfMonth = new DateTime(year, m, 1);
-            var daysInMonth = DateTime.DaysInMonth(year, m);
-            var startOfNextMonth = startOfMonth.AddMonths(1);
-            var occupiedRoomNights = 0;
-            var monthGuests = 0;
-
-            foreach (DataRow r in dtBookings.Rows)
+            if (DateTime.TryParseExact($"{item.Period}/{year}", "dd/MM/yyyy",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var ngay))
             {
-                if (!TryParseFlexibleDate(r["NgayNhan"]?.ToString(), out var checkIn)) continue;
-                if (!TryParseFlexibleDate(r["NgayTra"]?.ToString(), out var checkOut) || checkOut <= checkIn)
+                doanhThuTheoThang[ngay.Month] += item.Revenue;
+                luotKhachTheoThang[ngay.Month] += item.GuestCount;
+            }
+        }
+
+        // 2. Lấy tổng số phòng hiện có
+        var objTongPhong = DatabaseHelper.ExecuteScalar("SELECT COUNT(*) FROM Phong;");
+        int tongPhong = objTongPhong != null && objTongPhong != DBNull.Value ? Convert.ToInt32(objTongPhong) : 0;
+
+        // 3. Tính tổng số đêm phòng có khách của từng tháng
+        var tongDemPhongThang = new int[13];
+        if (tongPhong > 0)
+        {
+            bool dpCoMaNV = CoCotTrongBang("DatPhong", "MaNV");
+            bool hdCoMaNV = CoCotTrongBang("HoaDon", "MaNV");
+            string selMaNVDP = dpCoMaNV ? "dp.MaNV AS MaNVDP" : "NULL AS MaNVDP";
+            string selMaNVHD = hdCoMaNV ? "hd.MaNV AS MaNVHD" : "NULL AS MaNVHD";
+
+            var sqlPhongDaDat = $@"
+                SELECT dp.MaDP, ctdp.MaPhong, dp.NgayNhan, dp.NgayTra, {selMaNVDP}, {selMaNVHD}
+                FROM DatPhong dp
+                INNER JOIN ChiTietDatPhong ctdp ON dp.MaDP = ctdp.MaDP
+                LEFT JOIN HoaDon hd ON hd.MaDP = dp.MaDP
+                WHERE dp.TrangThai IN ('Đang ở', 'Đã hoàn tất', 'CheckedIn', 'Completed');";
+
+            var dtBooking = DatabaseHelper.ExecuteDataTable(sqlPhongDaDat);
+            var daTinhPhongDon = new HashSet<string>();
+
+            foreach (DataRow r in dtBooking.Rows)
+            {
+                if (employeeId.HasValue)
                 {
-                    checkOut = checkIn.AddDays(1);
+                    var maNV = LayMaNVThucHien(r, "MaNVDP", "MaNVHD");
+                    if (maNV != employeeId.Value) continue;
                 }
 
-                if (checkIn.Year == year && checkIn.Month == m)
-                {
-                    monthGuests += Convert.ToInt32(r["SoKhach"]);
-                }
+                string khoa = $"{r["MaDP"]}_{r["MaPhong"]}";
+                if (!daTinhPhongDon.Add(khoa)) continue;
 
-                var overlapStart = checkIn > startOfMonth ? checkIn : startOfMonth;
-                var overlapEnd = checkOut < startOfNextMonth ? checkOut : startOfNextMonth;
-                if (overlapEnd > overlapStart)
+                if (!TryParseFlexibleDate(r["NgayNhan"]?.ToString(), out var ngayNhan))
+                    continue;
+                if (!TryParseFlexibleDate(r["NgayTra"]?.ToString(), out var ngayTra) || ngayTra.Date <= ngayNhan.Date)
+                    ngayTra = ngayNhan.Date.AddDays(1);
+
+                var tu = ngayNhan.Date;
+                var den = ngayTra.Date;
+
+                for (int month = 1; month <= 12; month++)
                 {
-                    var nights = (overlapEnd - overlapStart).Days;
-                    var roomCount = Math.Max(1, Convert.ToInt32(r["SoPhong"]));
-                    occupiedRoomNights += nights * roomCount;
+                    var dauThang = new DateTime(year, month, 1);
+                    var dauThangSau = dauThang.AddMonths(1);
+
+                    var batDauGiao = tu > dauThang ? tu : dauThang;
+                    var ketThucGiao = den < dauThangSau ? den : dauThangSau;
+
+                    if (ketThucGiao > batDauGiao)
+                        tongDemPhongThang[month] += (ketThucGiao - batDauGiao).Days;
                 }
             }
+        }
 
-            var totalCapacity = totalRooms * daysInMonth;
-            var occupancyRate = totalCapacity > 0
-                ? Math.Round(occupiedRoomNights * 100.0 / totalCapacity, 1)
+        // 4. Tổng hợp kết quả 12 tháng
+        var result = new List<RevenueReportDto>();
+        for (int month = 1; month <= 12; month++)
+        {
+            int soNgayTrongThang = DateTime.DaysInMonth(year, month);
+            double congSuat = tongPhong > 0
+                ? Math.Min(100.0, tongDemPhongThang[month] * 100.0 / (tongPhong * soNgayTrongThang))
                 : 0;
-            if (occupancyRate > 100.0) occupancyRate = 100.0;
-
-            revenueByMonth.TryGetValue(m, out var rev);
-            var guestCount = guestsByMonth.TryGetValue(m, out var g) && g > 0 ? g : monthGuests;
 
             result.Add(new RevenueReportDto
             {
-                Period = $"T{m}",
-                Revenue = rev,
-                OccupancyRate = occupancyRate,
-                GuestCount = guestCount
+                Period = $"T{month}",
+                Revenue = doanhThuTheoThang[month],
+                OccupancyRate = congSuat,
+                GuestCount = luotKhachTheoThang[month]
             });
         }
 
         return result;
     }
-    
+
+    public List<RevenueReportDto> GetDailyRevenue(DateTime fromDate, DateTime toDate, int? employeeId = null)
+    {
+        if (fromDate.Date > toDate.Date)
+            return new List<RevenueReportDto>();
+
+        var mapByDate = new Dictionary<DateTime, RevenueReportDto>();
+        for (var d = fromDate.Date; d <= toDate.Date; d = d.AddDays(1))
+        {
+            mapByDate[d] = new RevenueReportDto
+            {
+                Period = d.ToString("dd/MM"),
+                Revenue = 0,
+                OccupancyRate = 0,
+                GuestCount = 0
+            };
+        }
+        bool ttCoMaNV = CoCotTrongBang("ThanhToan", "MaNV");
+        bool hdCoMaNV = CoCotTrongBang("HoaDon", "MaNV");
+        bool dpCoMaNV = CoCotTrongBang("DatPhong", "MaNV");
+
+        string selMaNVTT = ttCoMaNV ? "tt.MaNV AS MaNVTT" : "NULL AS MaNVTT";
+        string selMaNVHD = hdCoMaNV ? "hd.MaNV AS MaNVHD" : "NULL AS MaNVHD";
+        string selMaNVDP = dpCoMaNV ? "dp.MaNV AS MaNVDP" : "NULL AS MaNVDP";
+        var countedInvoiceIds = new HashSet<int>();
+
+        // 1. Lấy các giao dịch thu tiền từ bảng ThanhToan
+        var sqlThanhToan = $@"
+            SELECT tt.MaHD AS MaHDTT, tt.SoTien, tt.NgayTT, {selMaNVTT}, {selMaNVHD}, {selMaNVDP}, hd.*
+            FROM ThanhToan tt
+            LEFT JOIN HoaDon hd ON tt.MaHD = hd.MaHD
+            LEFT JOIN DatPhong dp ON hd.MaDP = dp.MaDP;";
+        
+        var dtThanhToan = DatabaseHelper.ExecuteDataTable(sqlThanhToan);
+        foreach (DataRow r in dtThanhToan.Rows)
+        {
+            if (employeeId.HasValue)
+            {
+                var maNV = LayMaNVThucHien(r, "MaNVTT", "MaNVHD", "MaNVDP");
+                if (maNV != employeeId.Value) continue;
+            }
+            
+            if (!TryParseFlexibleDate(r["NgayTT"]?.ToString(), out var payDate))
+                continue;
+
+            var day = payDate.Date;
+            if (day < fromDate.Date || day > toDate.Date)
+                continue;
+
+            double soTienTT = r["SoTien"] != DBNull.Value ? Convert.ToDouble(r["SoTien"]) : 0;
+            double tongHD = TinhTongTienChuanHoa(r);
+            mapByDate[day].Revenue += Math.Max(soTienTT, tongHD);
+            mapByDate[day].GuestCount += 1;
+
+            if (r["MaHDTT"] != DBNull.Value)
+                countedInvoiceIds.Add(Convert.ToInt32(r["MaHDTT"]));
+        }
+
+        // 2. Cộng thêm hóa đơn đã thanh toán trực tiếp nhưng chưa ghi sang ThanhToan
+        var sqlHoaDon = $@"
+            SELECT {selMaNVHD}, {selMaNVDP}, hd.*
+            FROM HoaDon hd
+            LEFT JOIN DatPhong dp ON hd.MaDP = dp.MaDP
+            WHERE hd.TrangThai IN ('Đã thanh toán', 'Paid');";
+        var dtHoaDon = DatabaseHelper.ExecuteDataTable(sqlHoaDon);
+        foreach (DataRow r in dtHoaDon.Rows)
+        {
+            if (employeeId.HasValue)
+            {
+                var maNV = LayMaNVThucHien(r, "MaNVHD", "MaNVDP");
+                if (maNV != employeeId.Value) continue;
+            }
+            
+            int maHD = r.Table.Columns.Contains("MaHD") && r["MaHD"] != DBNull.Value
+                ? Convert.ToInt32(r["MaHD"]) : 0;
+            if (maHD > 0 && countedInvoiceIds.Contains(maHD))
+                continue;
+
+            var ngayLap = r.Table.Columns.Contains("NgayLap") ? r["NgayLap"]?.ToString() : null;
+            if (!TryParseFlexibleDate(ngayLap, out var invDate))
+                continue;
+
+            var day = invDate.Date;
+            if (day < fromDate.Date || day > toDate.Date)
+                continue;
+
+            mapByDate[day].Revenue += TinhTongTienChuanHoa(r);
+            mapByDate[day].GuestCount += 1;
+        }
+
+        return mapByDate.OrderBy(kv => kv.Key).Select(kv => kv.Value).ToList();
+    }
+    private static bool CoCotTrongBang(string tenBang, string tenCot)
+    {
+        var dt = DatabaseHelper.ExecuteDataTable($"PRAGMA table_info({tenBang});");
+        foreach (DataRow row in dt.Rows)
+        {
+            if (string.Equals(row["name"]?.ToString(), tenCot, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    private static int? LayMaNVThucHien(DataRow r, params string[] tenCacCot)
+    {
+        foreach (var col in tenCacCot)
+        {
+            if (r.Table.Columns.Contains(col) && r[col] != DBNull.Value && int.TryParse(r[col].ToString(), out int maNV) && maNV > 0)
+                return maNV;
+        }
+        return null;
+    }
+
     private static bool TryParseFlexibleDate(string? input, out DateTime date)
     {
         date = DateTime.MinValue;

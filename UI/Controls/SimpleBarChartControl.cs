@@ -15,6 +15,7 @@ public class SimpleBarChartControl : UserControl
     public SimpleBarChartControl()
     {
         DoubleBuffered = true;
+        ResizeRedraw = true;
         BackColor = Color.White;
         Font = new Font(AppConstants.FontChuChinh, 10f, FontStyle.Regular);
     }
@@ -40,6 +41,7 @@ public class SimpleBarChartControl : UserControl
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
+        e.Graphics.Clear(BackColor);
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 

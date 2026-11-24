@@ -535,7 +535,7 @@ public partial class ReceptionistMainForm
                     return;
                 }
 
-                XuLyChuyenMenu("Check-in/Check-out");
+                XuLyChuyenMenu("Check-in / Check-out");
                 ChonDonDeCheckOut(don.BookingId);
             }, "chuyển sang check-out nhanh", this);
         }

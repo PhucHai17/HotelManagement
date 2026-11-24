@@ -18,6 +18,7 @@ public class LoginForm : Form
     private LinkLabel lnkDangKy = null!;
     private RoundedTextBox txtMatKhau = null!;
     private RoundedTextBox txtTenDangNhap = null!;
+    private string _vaiTroDangChon = "Lễ tân";
 
     public LoginForm()
     {
@@ -211,6 +212,7 @@ public class LoginForm : Form
 
     private void ChonVaiTro(string vaiTro)
     {
+        _vaiTroDangChon = vaiTro;
         UIHelper.DinhDangNutBamPhu(btnVaiTroKhach);
         UIHelper.DinhDangNutBamPhu(btnVaiTroLeTan);
         UIHelper.DinhDangNutBamPhu(btnVaiTroQuanLy);
@@ -225,6 +227,7 @@ public class LoginForm : Form
                 btnChon = btnVaiTroQuanLy;
                 break;
             default:
+                _vaiTroDangChon = "Lễ tân";
                 btnChon = btnVaiTroLeTan;
                 break;
         }
@@ -253,7 +256,18 @@ public class LoginForm : Form
                 MessageBox.Show(this, thongBao, "Đăng nhập thất bại", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-
+            var roleId = SessionManager.CurrentUser?.RoleId;
+            if (!KiemTraDungVaiTro(roleId))
+            {
+                SessionManager.Logout();
+                MessageBox.Show(
+                    this,
+                    $"Tài khoản này không thuộc vai trò \"{_vaiTroDangChon}\". Vui lòng chọn đúng vai trò đăng nhập!",
+                    "Sai vai trò đăng nhập",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
             Hide();
             try
             {
@@ -276,12 +290,15 @@ public class LoginForm : Form
 
                         break;
                     case AppConstants.MaVTLeTan:
-                    default:
                         using (var frmLeTan = new ReceptionistMainForm())
                         {
                             frmLeTan.ShowDialog();
                         }
-
+                        break;
+                    default:
+                        SessionManager.Logout();
+                        MessageBox.Show(this, "Vai trò tài khoản không hợp lệ!", "Lỗi phân quyền",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
                         break;
                 }
             }
@@ -294,5 +311,15 @@ public class LoginForm : Form
                 }
             }
         }, "đăng nhập hệ thống", this);
+    }
+    private bool KiemTraDungVaiTro(int? roleId)
+    {
+        return _vaiTroDangChon switch
+        {
+            "Khách hàng" => roleId == AppConstants.MaVTKhachHang,
+            "Lễ tân" => roleId == AppConstants.MaVTLeTan,
+            "Quản lý" => roleId == AppConstants.MaVTQuanLy || roleId == AppConstants.MaVTAdmin,
+            _ => false
+        };
     }
 }
