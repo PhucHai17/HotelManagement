@@ -9,6 +9,7 @@ public class ManagerMainForm : ReceptionistMainForm
     private Panel pnlNhanVien = null!;
     private Panel pnlNhatKy = null!;
     private EmployeeTab _employeeTab = null!;
+    private SystemLogTab _systemLogTab = null!;
     
     protected override string LayTieuDeForm()
     {
@@ -62,6 +63,7 @@ public class ManagerMainForm : ReceptionistMainForm
                 if (pnlNhatKy != null)
                 {
                     ChuyenTab(pnlNhatKy, "Nhật ký hệ thống");
+                    _systemLogTab?.LoadLogs();
                     return true;
                 }
                 return false;
@@ -85,9 +87,14 @@ public class ManagerMainForm : ReceptionistMainForm
     // Khởi tạo khung tab Nhật ký hệ thống
     private void KhoiTaoTabNhatKy()
     {
-        pnlNhatKy = TaoKhungTabCoBan(
-            "NHẬT KÝ HỆ THỐNG",
-            "Theo dõi lịch sử truy cập, biến động phòng, hóa đơn và tác nghiệp của nhân sự");
+        pnlNhatKy = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.White,
+            Padding = new Padding(0)
+        };
+        _systemLogTab = new SystemLogTab { Dock = DockStyle.Fill };
+        pnlNhatKy.Controls.Add(_systemLogTab);
         pnlMainContent.Controls.Add(pnlNhatKy);
     }
     
@@ -103,10 +110,10 @@ public class ManagerMainForm : ReceptionistMainForm
         var pnlHeader = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 70,
+            Height = 86,
             BackColor = Color.White,
             BorderStyle = BorderStyle.FixedSingle,
-            Padding = new Padding(20, 12, 20, 10),
+            Padding = new Padding(20, 14, 20, 12),
             Margin = new Padding(0, 0, 0, 12)
         };
 
@@ -115,8 +122,8 @@ public class ManagerMainForm : ReceptionistMainForm
             Text = tieuDe,
             Font = new Font(AppConstants.FontChuChinh, 14f, FontStyle.Bold),
             ForeColor = AppConstants.MauXanhNavy,
-            Dock = DockStyle.Top,
-            Height = 26,
+            Location = new Point(20, 14),
+            AutoSize = true,
             UseMnemonic = false
         };
 
@@ -125,8 +132,8 @@ public class ManagerMainForm : ReceptionistMainForm
             Text = moTa,
             Font = new Font(AppConstants.FontChuChinh, 10f, FontStyle.Regular),
             ForeColor = Color.FromArgb(100, 116, 139),
-            Dock = DockStyle.Top,
-            Height = 20,
+            Location = new Point(20, 48),
+            AutoSize = true,
             UseMnemonic = false
         };
 

@@ -33,28 +33,24 @@ public class  EmployeeTab : UserControl
             ColumnCount = 1,
             Margin = new Padding(0)
         };
-        tblRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        tblRoot.RowStyles.Add(new RowStyle(SizeType.Absolute, 64f));
         tblRoot.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         var pnlTop = new Panel
         {
             Dock = DockStyle.Fill,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Height = 56,
             BackColor = Color.White,
             BorderStyle = BorderStyle.FixedSingle,
-            Padding = new Padding(14, 10, 14, 8),
             Margin = new Padding(0, 0, 0, 8)
         };
 
         var flowTop = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = true,
-            Padding = new Padding(0),
+            WrapContents = false,
+            Padding = new Padding(14, 10, 14, 8),
             Margin = new Padding(0)
         };
 
@@ -63,7 +59,7 @@ public class  EmployeeTab : UserControl
             Text = "Tìm nhân viên:",
             Font = new Font("Times New Roman", 9.5f, FontStyle.Regular),
             AutoSize = true,
-            Margin = new Padding(0, 8, 8, 6),
+            Margin = new Padding(0, 8, 8, 0),
             ForeColor = Color.FromArgb(71, 85, 105),
             UseMnemonic = false
         };
@@ -73,16 +69,16 @@ public class  EmployeeTab : UserControl
             Width = 240,
             Height = 32,
             Font = new Font("Times New Roman", 10f, FontStyle.Regular),
-            Margin = new Padding(0, 3, 14, 6),
+            Margin = new Padding(0, 2, 14, 0),
             PlaceholderText = "Tên, Email, SĐT, CCCD..."
         };
         txtSearch.TextChanged += (s, e) => LoadEmployees();
 
-        btnAdd = CreateButton("+ Thêm nhân viên", 145, OpenAddDialog, true);
-        btnEdit = CreateButton("Sửa thông tin", 115, () => { if (_selectedEmployee != null) OpenEditDialog(_selectedEmployee); });
-        btnToggleLock = CreateButton("Khóa / Mở khóa", 135, () => { if (_selectedEmployee != null) ToggleLockStatus(_selectedEmployee); });
-        btnRefresh = CreateButton("Làm mới", 95, () => { txtSearch.Text = string.Empty; LoadEmployees(); });
-        btnRefresh.Margin = new Padding(0, 2, 0, 6);
+        btnAdd = CreateButton("+ Thêm nhân viên", 175, OpenAddDialog, true);
+        btnEdit = CreateButton("Sửa thông tin", 140, () => { if (_selectedEmployee != null) OpenEditDialog(_selectedEmployee); });
+        btnToggleLock = CreateButton("Khóa / Mở khóa", 155, () => { if (_selectedEmployee != null) ToggleLockStatus(_selectedEmployee); });
+        btnRefresh = CreateButton("Làm mới", 110, () => { txtSearch.Text = string.Empty; LoadEmployees(); });
+        btnRefresh.Margin = new Padding(0);
 
         flowTop.Controls.AddRange(new Control[] { lblSearch, txtSearch, btnAdd, btnEdit, btnToggleLock, btnRefresh });
         pnlTop.Controls.Add(flowTop);
@@ -124,16 +120,18 @@ public class  EmployeeTab : UserControl
         Controls.Add(tblRoot);
     }
     
-    private static Button CreateButton(string text, int width, Action onClick, bool isPrimary = false)
+    private static Button CreateButton(string text, int minWidth, Action onClick, bool isPrimary = false)
     {
         var btn = new Button
         {
             Text = text,
-            Width = width,
-            Height = 34,
+            Size = new Size(minWidth, 36),
+            MinimumSize = new Size(minWidth, 36),
+            AutoSize = true,
+            Padding = new Padding(12, 0, 12, 0),
             UseMnemonic = false,
             Cursor = Cursors.Hand,
-            Margin = new Padding(0, 2, 8, 6),
+            Margin = new Padding(0, 0, 8, 0),
             Font = new Font("Times New Roman", 10f, isPrimary ? FontStyle.Bold : FontStyle.Regular)
         };
         if (isPrimary) UIHelper.DinhDangNutBamChinh(btn);
@@ -249,15 +247,13 @@ public class  EmployeeTab : UserControl
             UIHelper.VeBadge(e, cellText, backColor, foreColor);
         }
     }
-
-    // Mở hộp thoại thêm nhân viên mới
+    
     private void OpenAddDialog()
     {
         using var dlg = new EmployeeDialog(null);
         if (dlg.ShowDialog(FindForm()) == DialogResult.OK) LoadEmployees();
     }
-
-    // Mở hộp thoại sửa thông tin nhân viên
+    
     private void OpenEditDialog(Employee employee)
     {
         using var dlg = new EmployeeDialog(employee);

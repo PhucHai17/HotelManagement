@@ -28,12 +28,11 @@ public class EmployeeDialog : Form
         InitComponents();
         LoadInitialData();
     }
-
-    // Khởi tạo bố cục hộp thoại thêm hoặc sửa thông tin nhân viên
+    
     private void InitComponents()
     {
         Text = _isNew ? "HotelPro - Thêm nhân viên mới" : "HotelPro - Sửa thông tin nhân viên";
-        Size = new Size(520, 540);
+        Size = new Size(560, 690);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -51,12 +50,12 @@ public class EmployeeDialog : Form
             UseMnemonic = false
         });
 
-        var pnlFooter = new Panel { Dock = DockStyle.Bottom, Height = 54, BackColor = AppConstants.MauNenChung, BorderStyle = BorderStyle.FixedSingle };
-        var btnSave = new Button { Text = "Lưu thông tin", Size = new Size(130, 34), Location = new Point(230, 9), UseMnemonic = false, Cursor = Cursors.Hand };
+        var pnlFooter = new Panel { Dock = DockStyle.Bottom, Height = 56, BackColor = AppConstants.MauNenChung, BorderStyle = BorderStyle.FixedSingle };
+        var btnSave = new Button { Text = "Lưu thông tin", Size = new Size(165, 36), Location = new Point(245, 10), UseMnemonic = false, Cursor = Cursors.Hand };
         UIHelper.DinhDangNutBamNavy(btnSave);
         btnSave.Click += (s, e) => HandleSave();
 
-        var btnCancel = new Button { Text = "Hủy bỏ", Size = new Size(100, 34), Location = new Point(370, 9), UseMnemonic = false, Cursor = Cursors.Hand };
+        var btnCancel = new Button { Text = "Hủy bỏ", Size = new Size(110, 36), Location = new Point(420, 10), UseMnemonic = false, Cursor = Cursors.Hand };
         UIHelper.DinhDangNutBamPhu(btnCancel);
         btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
@@ -65,13 +64,13 @@ public class EmployeeDialog : Form
         var pnlContent = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24, 12, 24, 12), AutoScroll = true };
 
         var y = 10;
-        txtFullName = AddInputField(pnlContent, "Họ và tên (*):", y, "Nhập họ tên nhân viên..."); y += 54;
-        txtEmail = AddInputField(pnlContent, "Email (*):", y, "vidu: letan@hotelpro.com"); y += 54;
+        txtFullName = AddInputField(pnlContent, "Họ và tên (*):", y, "Nhập họ tên nhân viên..."); y += 62;
+        txtEmail = AddInputField(pnlContent, "Email (*):", y, "vidu: letan@hotelpro.com"); y += 62;
         txtPassword = AddInputField(pnlContent, _isNew ? "Mật khẩu (*):" : "Mật khẩu mới (để trống nếu giữ nguyên):", y,
-            _isNew ? "Tối thiểu 6 ký tự..." : "Để trống nếu không đổi mật khẩu...", true); y += 54;
-        txtPhoneNumber = AddInputField(pnlContent, "Số điện thoại (*):", y, "10-11 chữ số bắt đầu bằng 0..."); y += 54;
-        txtNationalId = AddInputField(pnlContent, "Số CCCD (*):", y, "Đúng 12 chữ số..."); y += 54;
-        txtPosition = AddInputField(pnlContent, "Chức vụ (*):", y, "Lễ tân"); y += 54;
+            _isNew ? "Tối thiểu 6 ký tự..." : "Để trống nếu không đổi mật khẩu...", true); y += 62;
+        txtPhoneNumber = AddInputField(pnlContent, "Số điện thoại (*):", y, "10-11 chữ số bắt đầu bằng 0..."); y += 62;
+        txtNationalId = AddInputField(pnlContent, "Số CCCD (*):", y, "Đúng 12 chữ số..."); y += 62;
+        txtPosition = AddInputField(pnlContent, "Chức vụ (*):", y, "Lễ tân"); y += 62;
 
         var lblRole = new Label
         {
@@ -79,14 +78,14 @@ public class EmployeeDialog : Form
             Font = new Font("Times New Roman", 9.5f, FontStyle.Bold),
             ForeColor = AppConstants.MauChuChinh,
             Location = new Point(24, y),
-            Size = new Size(450, 18),
+            AutoSize = true,
             UseMnemonic = false
         };
         cboRole = new ComboBox
         {
             Font = new Font("Times New Roman", 10f, FontStyle.Regular),
-            Location = new Point(24, y + 20),
-            Size = new Size(450, 26),
+            Location = new Point(24, y + 24),
+            Size = new Size(490, 26),
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         pnlContent.Controls.AddRange(new Control[] { lblRole, cboRole });
@@ -95,8 +94,7 @@ public class EmployeeDialog : Form
         Controls.Add(pnlFooter);
         Controls.Add(pnlHeader);
     }
-
-    // Thêm một trường nhập liệu vào form
+    
     private static TextBox AddInputField(Panel parent, string labelText, int y, string placeholder = "", bool isPassword = false)
     {
         var lbl = new Label
@@ -105,14 +103,14 @@ public class EmployeeDialog : Form
             Font = new Font("Times New Roman", 9.5f, FontStyle.Bold),
             ForeColor = AppConstants.MauChuChinh,
             Location = new Point(24, y),
-            Size = new Size(450, 18),
+            AutoSize = true,
             UseMnemonic = false
         };
         var txt = new TextBox
         {
             Font = new Font("Times New Roman", 10f, FontStyle.Regular),
-            Location = new Point(24, y + 20),
-            Size = new Size(450, 26),
+            Location = new Point(24, y + 24),
+            Size = new Size(490, 26),
             PlaceholderText = placeholder,
             UseSystemPasswordChar = isPassword
         };
@@ -120,8 +118,7 @@ public class EmployeeDialog : Form
         parent.Controls.Add(txt);
         return txt;
     }
-
-    // Nạp dữ liệu ban đầu cho các điều khiển
+    
     private void LoadInitialData()
     {
         cboRole.Items.Clear();
@@ -146,8 +143,7 @@ public class EmployeeDialog : Form
         cboRole.Items.Add(new RoleItem(currentRoleId, roleName));
         cboRole.SelectedIndex = 0;
     }
-
-    // Xử lý lưu thông tin nhân viên xuống cơ sở dữ liệu
+    
     private void HandleSave()
     {
         var fullName = txtFullName.Text.Trim();

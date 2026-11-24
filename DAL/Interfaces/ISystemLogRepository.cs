@@ -1,8 +1,8 @@
 namespace DAL.Interfaces;
 
-// Interface repository nhật ký
+// Interface repository nhật ký hệ thống
 public interface ISystemLogRepository
 {
     void LogAction(int accountId, string action, string affectedTable);
-    List<SystemLog> GetLogs(DateTime? fromDate = null, DateTime? toDate = null, string? usernameKeyword = null);
+    List<SystemLog> GetLogs(string? keyword = null, string? tableFilter = null, DateTime? fromDate = null, DateTime? toDate = null);
 }

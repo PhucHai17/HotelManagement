@@ -13,6 +13,7 @@ public static class AppServices
     private static Lazy<IInvoiceService> _invoice = CreateLazy<IInvoiceService>(() => new InvoiceService());
     private static Lazy<IReportService> _report = CreateLazy<IReportService>(() => new ReportService());
     private static Lazy<IEmployeeService> _employee = CreateLazy<IEmployeeService>(() => new EmployeeService());
+    private static Lazy<ISystemLogService> _systemLog = CreateLazy<ISystemLogService>(() => new SystemLogService());
 
     public static IAuthService Auth => _auth.Value;
     public static ICustomerService Customer => _customer.Value;
@@ -22,6 +23,7 @@ public static class AppServices
     public static IInvoiceService Invoice => _invoice.Value;
     public static IReportService Report => _report.Value;
     public static IEmployeeService Employee => _employee.Value;
+    public static ISystemLogService SystemLog => _systemLog.Value;
 
     public static void Reset()
     {
@@ -33,6 +35,7 @@ public static class AppServices
         _invoice = CreateLazy<IInvoiceService>(() => new InvoiceService());
         _report = CreateLazy<IReportService>(() => new ReportService());
         _employee = CreateLazy<IEmployeeService>(() => new EmployeeService());
+        _systemLog = CreateLazy<ISystemLogService>(() => new SystemLogService());
     }
 
     private static Lazy<T> CreateLazy<T>(Func<T> factory) => new(factory);
