@@ -5,7 +5,7 @@ namespace DAL.Repositories;
 // Repository truy vấn tài khoản
 public class AccountRepository : BaseRepository, IAccountRepository
 {
-    // Kiểm tra đăng nhập bằng cách đối chiếu hash SHA-256 qua PasswordHelper
+    // Kiểm tra đăng nhập bằng cách đối chiếu hash (PBKDF2, hoặc SHA-256 cũ) qua PasswordHelper
     public Account? Login(string username, string password)
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
@@ -31,6 +31,21 @@ public class AccountRepository : BaseRepository, IAccountRepository
 
         if (!PasswordHelper.VerifyPassword(password, account.PasswordHash))
             return null;
+
+        // Tự động nâng cấp hash SHA-256 cũ lên PBKDF2 có muối sau khi đăng nhập đúng
+        if (PasswordHelper.NeedsRehash(account.PasswordHash))
+        {
+            try
+            {
+                var newHash = PasswordHelper.HashPassword(password);
+                if (ChangePassword(account.AccountId, newHash))
+                    account.PasswordHash = newHash;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error(ex, "Nâng cấp hash mật khẩu");
+            }
+        }
 
         return account;
     }

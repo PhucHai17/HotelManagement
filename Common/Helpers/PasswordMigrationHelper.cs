@@ -37,10 +37,10 @@ public static class PasswordMigrationHelper
                 }
             }
 
-            // Chỉ hash những mật khẩu chưa phải SHA-256
+            // Chỉ hash những mật khẩu còn ở dạng thô (chưa phải SHA-256/PBKDF2)
             foreach (var account in accounts)
             {
-                if (PasswordHelper.IsSha256Hash(account.Password))
+                if (PasswordHelper.IsHashed(account.Password))
                     continue;
 
                 string newHash =
