@@ -80,7 +80,7 @@ public class ManagerMainForm : ReceptionistMainForm
             "Phân quyền tài khoản, quản lý hồ sơ nhân sự và phân ca làm việc");
         _employeeTab = new EmployeeTab { Dock = DockStyle.Fill };
         pnlNhanVien.Controls.Add(_employeeTab);
-        _employeeTab.SendToBack();
+        _employeeTab.BringToFront();
         pnlMainContent.Controls.Add(pnlNhanVien);
     }
 
