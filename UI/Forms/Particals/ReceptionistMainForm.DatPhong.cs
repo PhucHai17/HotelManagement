@@ -56,7 +56,8 @@ public partial class ReceptionistMainForm
             cboLocTrangThaiDP.SelectedIndexChanged += (s, e) => TaiDuLieuDatPhong();
 
             var lblTuNgay = new Label { Text = "Từ ngày:", AutoSize = true, Margin = new Padding(0, 8, 6, 6), ForeColor = Color.FromArgb(71, 85, 105) };
-            dtpLocNgayDP = new DateTimePicker { Width = 140, Height = 30, Margin = new Padding(0, 3, 14, 6), Format = DateTimePickerFormat.Custom, CustomFormat = "dd/MM/yyyy" };
+            dtpLocNgayDP = new DateTimePicker { Width = 150, Height = 30, Margin = new Padding(0, 3, 14, 6), Format = DateTimePickerFormat.Custom, CustomFormat = "dd/MM/yyyy", ShowCheckBox = true, Checked = false };
+            dtpLocNgayDP.ValueChanged += (s, e) => TaiDuLieuDatPhong();
 
             var btnThemDP = new Button
             {
@@ -115,10 +116,21 @@ public partial class ReceptionistMainForm
             dgvDatPhong.Columns["TrangThai"].MinimumWidth = 135;
             dgvDatPhong.Columns["TrangThai"].FillWeight = 95;
 
+            var colSua = new DataGridViewButtonColumn
+            {
+                Name = "Sua",
+                HeaderText = "Thao tác",
+                Text = "Sửa",
+                UseColumnTextForButtonValue = true,
+                MinimumWidth = 80,
+                FillWeight = 55
+            };
+            dgvDatPhong.Columns.Add(colSua);
+
             var colHuy = new DataGridViewButtonColumn
             {
                 Name = "Huy",
-                HeaderText = "Thao tác",
+                HeaderText = "",
                 Text = "Hủy",
                 UseColumnTextForButtonValue = true,
                 MinimumWidth = 95,
@@ -156,12 +168,22 @@ public partial class ReceptionistMainForm
                 string tuKhoa = txtTimDatPhong.Text.Trim();
                 string trangThai = cboLocTrangThaiDP.SelectedItem?.ToString() ?? "Tất cả";
 
-                var ds = _datPhongBLL.Search(tuKhoa, trangThai, "");
+                string tuNgay = dtpLocNgayDP.Checked ? FormatHelper.FormatDate(dtpLocNgayDP.Value) : "";
+                var ds = _datPhongBLL.Search(tuKhoa, trangThai, tuNgay);
                 foreach (var dp in ds)
                 {
                     string nhanStr = FormatHelper.FormatDate(FormatHelper.ParseDate(dp.CheckInDate));
                     string traStr = FormatHelper.FormatDate(FormatHelper.ParseDate(dp.CheckOutDate));
-                    int index = dgvDatPhong.Rows.Add(dp.DisplayCode, dp.CustomerName, dp.RoomNumber, nhanStr, traStr, dp.Status);
+                    string trangThaiHienThi = dp.Status switch
+                    {
+                        Entity.Enums.BookingStatus.Pending => AppConstants.DPChoDuyet,
+                        Entity.Enums.BookingStatus.Confirmed => AppConstants.DPDaXacNhan,
+                        Entity.Enums.BookingStatus.CheckedIn => AppConstants.DPDangO,
+                        Entity.Enums.BookingStatus.CheckedOut => AppConstants.DPDaHoanTat,
+                        Entity.Enums.BookingStatus.Cancelled => AppConstants.DPDaHuy,
+                        _ => AppConstants.DPChoDuyet
+                    };
+                    int index = dgvDatPhong.Rows.Add(dp.DisplayCode, dp.CustomerName, dp.RoomNumber, nhanStr, traStr, trangThaiHienThi);
                     dgvDatPhong.Rows[index].Tag = dp;
                 }
             }, "tải danh sách đặt phòng", this);
@@ -169,6 +191,25 @@ public partial class ReceptionistMainForm
 
         private void DgvDatPhong_CellClick(object? sender, DataGridViewCellEventArgs e)
         {
+            if (e.RowIndex >= 0 && dgvDatPhong.Columns["Sua"] != null && e.ColumnIndex == dgvDatPhong.Columns["Sua"].Index)
+            {
+                if (dgvDatPhong.Rows[e.RowIndex].Tag is Booking dpSua)
+                {
+                    if (dpSua.Status != Entity.Enums.BookingStatus.Pending && dpSua.Status != Entity.Enums.BookingStatus.Confirmed)
+                    {
+                        MessageBox.Show(this, "Chỉ có thể sửa đơn đặt phòng đang Chờ duyệt hoặc Đã xác nhận!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    using var frmSua = new EditBookingForm(dpSua);
+                    if (frmSua.ShowDialog(this) == DialogResult.OK)
+                    {
+                        TaiDuLieuDatPhong();
+                    }
+                }
+                return;
+            }
+
             if (e.RowIndex >= 0 && dgvDatPhong.Columns["Huy"] != null && e.ColumnIndex == dgvDatPhong.Columns["Huy"].Index)
             {
                 if (dgvDatPhong.Rows[e.RowIndex].Tag is Booking dp)
