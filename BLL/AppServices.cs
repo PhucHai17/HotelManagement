@@ -14,6 +14,7 @@ public static class AppServices
     private static Lazy<IReportService> _report = CreateLazy<IReportService>(() => new ReportService());
     private static Lazy<IEmployeeService> _employee = CreateLazy<IEmployeeService>(() => new EmployeeService());
     private static Lazy<ISystemLogService> _systemLog = CreateLazy<ISystemLogService>(() => new SystemLogService());
+    private static Lazy<IReviewService> _review = CreateLazy<IReviewService>(() => new ReviewService());
 
     public static IAuthService Auth => _auth.Value;
     public static ICustomerService Customer => _customer.Value;
@@ -24,6 +25,7 @@ public static class AppServices
     public static IReportService Report => _report.Value;
     public static IEmployeeService Employee => _employee.Value;
     public static ISystemLogService SystemLog => _systemLog.Value;
+    public static IReviewService Review => _review.Value;
 
     public static void Reset()
     {
@@ -36,6 +38,7 @@ public static class AppServices
         _report = CreateLazy<IReportService>(() => new ReportService());
         _employee = CreateLazy<IEmployeeService>(() => new EmployeeService());
         _systemLog = CreateLazy<ISystemLogService>(() => new SystemLogService());
+        _review = CreateLazy<IReviewService>(() => new ReviewService());
     }
 
     private static Lazy<T> CreateLazy<T>(Func<T> factory) => new(factory);
