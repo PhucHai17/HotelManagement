@@ -422,7 +422,7 @@ public partial class ReceptionistMainForm
             $"Số hóa đơn : {hd.DisplayCode}\r\n" +
             $"Khách hàng : {hd.CustomerName}\r\n" +
             $"Ngày xuất  : {DateTime.Now:dd/MM/yyyy HH:mm}\r\n" +
-            $"Trạng thái : {hd.Status}\r\n" +
+            $"Trạng thái : {LayTenTrangThaiHD(hd)}\r\n" +
             "----------------------------------------------\r\n" +
             $"Tiền phòng : {FormatHelper.FormatCurrency(hd.RoomCharge),30}\r\n" +
             $"Dịch vụ    : {FormatHelper.FormatCurrency(hd.ServiceCharge),30}\r\n" +
