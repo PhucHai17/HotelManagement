@@ -2,6 +2,7 @@ using BLL;
 using Common.Constants;
 using Common.Helpers;
 using Entity.Entities;
+using UI.Controls;
 using UI.Helpers;
 
 namespace UI.Forms;
@@ -9,13 +10,17 @@ namespace UI.Forms;
 public class RoomDetailForm : Form
 {
     private readonly RoomType _roomType;
+    private readonly DateTime? _ngayNhan;
+    private readonly DateTime? _ngayTra;
     private Button btnChon = null!;
     private Button btnDong = null!;
     private Panel pnlFooter = null!;
 
-    public RoomDetailForm(RoomType roomType)
+    public RoomDetailForm(RoomType roomType, DateTime? ngayNhan = null, DateTime? ngayTra = null)
     {
         _roomType = roomType ?? throw new ArgumentNullException(nameof(roomType));
+        _ngayNhan = ngayNhan;
+        _ngayTra = ngayTra;
         Font = new Font("Times New Roman", 10f, FontStyle.Regular);
         KhoiTaoGiaoDien();
     }
@@ -24,7 +29,7 @@ public class RoomDetailForm : Form
     private void KhoiTaoGiaoDien()
     {
         Text = $"HotelPro - Chi tiết hạng phòng {_roomType.Name}";
-        Size = new Size(580, 680);
+        Size = new Size(980, 680);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -285,7 +290,21 @@ public class RoomDetailForm : Form
         pnlContent.Controls.Add(lblTieuDeTienNghi);
         pnlContent.Controls.Add(tblTienNghi);
 
+        // Lịch còn trống của hạng phòng (bên phải)
+        var pnlLich = new Panel
+        {
+            Dock = DockStyle.Right,
+            Width = 380,
+            BackColor = Color.White,
+            BorderStyle = BorderStyle.FixedSingle
+        };
+        pnlLich.Controls.Add(new AvailabilityCalendarControl(_roomType.RoomTypeId, _ngayNhan, _ngayTra)
+        {
+            Dock = DockStyle.Fill
+        });
+
         Controls.Add(pnlContent);
+        Controls.Add(pnlLich);
         Controls.Add(pnlFooter);
         Controls.Add(pnlHeader);
 

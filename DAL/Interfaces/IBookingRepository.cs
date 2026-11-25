@@ -14,4 +14,6 @@ public interface IBookingRepository
     int? GetActiveBookingDetailIdByRoomNumber(string roomNumber);
     bool CheckIn(int bookingId, string identityCard, string actualCheckInDate);
     bool CheckOut(int bookingId, string actualCheckOutDate);
+    List<(DateTime CheckIn, DateTime CheckOut)> GetActiveStaysByRoomType(int roomTypeId);
+    bool UpdateBookingInfo(int bookingId, string checkInDate, string checkOutDate, int guestCount, double deposit);
 }

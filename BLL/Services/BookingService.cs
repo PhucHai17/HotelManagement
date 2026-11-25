@@ -6,7 +6,6 @@ public class BookingService : IBookingService
 {
     private readonly IBookingRepository _bookingRepo;
     private readonly IRoomRepository _roomRepo;
-    private IBookingService _bookingServiceImplementation;
     private readonly IInvoiceRepository _invoiceRepo;
     private readonly IServiceRepository _serviceRepo;
 
@@ -398,5 +397,83 @@ public class BookingService : IBookingService
         if (finalTotal < 0) finalTotal = 0;
 
         return (roomTotal, serviceTotal, discount, vat, finalTotal, nights);
+    }
+
+    // Sửa thông tin đơn đặt phòng (chỉ nhân viên, đơn chờ duyệt hoặc đã xác nhận)
+    public bool UpdateBookingInfo(int bookingId, DateTime checkIn, DateTime checkOut, int guestCount, double deposit, out string message)
+    {
+        if (!SessionManager.CheckPermission(
+                out message,
+                "Bạn không có quyền sửa đơn đặt phòng!",
+                AppConstants.QuyenQuanLyDatPhong))
+            return false;
+
+        var booking = bookingId > 0 ? _bookingRepo.GetById(bookingId) : null;
+        if (booking == null)
+        {
+            message = "Không tìm thấy đơn đặt phòng!";
+            return false;
+        }
+
+        if (booking.Status != BookingStatus.Pending && booking.Status != BookingStatus.Confirmed)
+        {
+            message = "Chỉ có thể sửa đơn đặt phòng đang Chờ duyệt hoặc Đã xác nhận!";
+            return false;
+        }
+
+        if (checkOut.Date <= checkIn.Date)
+        {
+            message = "Ngày trả phòng phải sau ngày nhận phòng!";
+            return false;
+        }
+
+        if (guestCount < 1)
+        {
+            message = "Số khách phải từ 1 người trở lên!";
+            return false;
+        }
+
+        if (deposit < 0)
+        {
+            message = "Tiền cọc không được âm!";
+            return false;
+        }
+
+        var ok = _bookingRepo.UpdateBookingInfo(
+            bookingId,
+            checkIn.ToString(AppConstants.DateFormat),
+            checkOut.ToString(AppConstants.DateFormat),
+            guestCount,
+            deposit);
+
+        message = ok ? $"Đã cập nhật đơn đặt phòng DP{bookingId:D3}!" : "Không thể cập nhật đơn đặt phòng!";
+        return ok;
+    }
+
+    // Danh sách ngày trong tháng mà mọi phòng của loại phòng đều đã có người đặt
+    public List<DateTime> GetFullyBookedDates(int roomTypeId, int year, int month)
+    {
+        var result = new List<DateTime>();
+        if (roomTypeId <= 0 || year < 1 || year > 9998 || month < 1 || month > 12) return result;
+
+        var totalRooms = _roomRepo.GetAll().Count(r => r.RoomTypeId == roomTypeId);
+        if (totalRooms == 0) return result;
+
+        var firstDay = new DateTime(year, month, 1);
+        var nextMonth = firstDay.AddMonths(1);
+        var usage = new Dictionary<DateTime, int>();
+
+        foreach (var (checkIn, checkOut) in _bookingRepo.GetActiveStaysByRoomType(roomTypeId))
+        {
+            var start = checkIn.Date < firstDay ? firstDay : checkIn.Date;
+            var end = checkOut.Date > nextMonth ? nextMonth : checkOut.Date;
+            for (var day = start; day < end; day = day.AddDays(1))
+            {
+                usage[day] = usage.TryGetValue(day, out var count) ? count + 1 : 1;
+            }
+        }
+
+        result.AddRange(usage.Where(kv => kv.Value >= totalRooms).Select(kv => kv.Key).OrderBy(d => d));
+        return result;
     }
 }

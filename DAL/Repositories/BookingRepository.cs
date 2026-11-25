@@ -326,4 +326,50 @@ public class BookingRepository : BaseRepository, IBookingRepository
 
         return dp;
     }
+
+    // Lấy khoảng ngày lưu trú của các đơn còn hiệu lực (chờ duyệt, đã xác nhận, đang ở) theo loại phòng
+    public List<(DateTime CheckIn, DateTime CheckOut)> GetActiveStaysByRoomType(int roomTypeId)
+    {
+        var sql = @"
+            SELECT dp.NgayNhan, dp.NgayTra
+            FROM DatPhong dp
+            INNER JOIN ChiTietDatPhong ctdp ON dp.MaDP = ctdp.MaDP
+            INNER JOIN Phong p ON ctdp.MaPhong = p.MaPhong
+            WHERE p.MaLoai = @MaLoai
+              AND dp.TrangThai IN (@ChoDuyet, @DaXacNhan, @DangO);";
+
+        var table = DatabaseHelper.ExecuteDataTable(sql,
+            CreateParameter("@MaLoai", roomTypeId),
+            CreateParameter("@ChoDuyet", AppConstants.DPChoDuyet),
+            CreateParameter("@DaXacNhan", AppConstants.DPDaXacNhan),
+            CreateParameter("@DangO", AppConstants.DPDangO));
+
+        var list = new List<(DateTime CheckIn, DateTime CheckOut)>();
+        foreach (DataRow r in table.Rows)
+        {
+            if (FormatHelper.TryParseDate(GetValue<string>(r, "NgayNhan", ""), out var checkIn) &&
+                FormatHelper.TryParseDate(GetValue<string>(r, "NgayTra", ""), out var checkOut))
+            {
+                list.Add((checkIn.Date, checkOut.Date));
+            }
+        }
+        return list;
+    }
+
+    // Cập nhật thông tin đơn đặt phòng (ngày nhận, ngày trả, số khách, tiền cọc)
+    public bool UpdateBookingInfo(int bookingId, string checkInDate, string checkOutDate, int guestCount, double deposit)
+    {
+        var sql = @"
+            UPDATE DatPhong
+            SET NgayNhan = @NgayNhan, NgayTra = @NgayTra, SoKhach = @SoKhach, TienCoc = @TienCoc
+            WHERE MaDP = @MaDP;";
+
+        var result = DatabaseHelper.ExecuteNonQuery(sql,
+            CreateParameter("@NgayNhan", checkInDate),
+            CreateParameter("@NgayTra", checkOutDate),
+            CreateParameter("@SoKhach", guestCount),
+            CreateParameter("@TienCoc", deposit),
+            CreateParameter("@MaDP", bookingId));
+        return result > 0;
+    }
 }

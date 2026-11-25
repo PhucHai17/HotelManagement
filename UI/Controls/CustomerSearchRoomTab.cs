@@ -470,7 +470,7 @@ public class CustomerSearchRoomTab : UserControl
         UIHelper.DinhDangNutBamPhu(btnChiTiet);
         btnChiTiet.Click += (s, e) =>
         {
-            using var frm = new RoomDetailForm(lp);
+            using var frm = new RoomDetailForm(lp, dtpTimNgayNhan.Value, dtpTimNgayTra.Value);
             if (frm.ShowDialog(this) == DialogResult.OK)
             {
                 ChonLoaiPhong(lp);
