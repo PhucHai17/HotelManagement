@@ -1,7 +1,9 @@
-﻿# Database
+﻿# SQLite Database (chặn file tạm, giữ lại file DB chuẩn trong DAL/Scripts)
 *.db
-*.sqlite
-*.sqlite3
+*.db-shm
+*.db-wal
+!DAL/Scripts/hotelmanagement.db
+![Dd][Aa][Ll]/[Ss]cripts/hotelmanagement.db
 
 # Build
 bin/

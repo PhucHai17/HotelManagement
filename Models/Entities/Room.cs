@@ -1,4 +1,5 @@
-﻿using Entity.Constants;
+﻿using Entity.Enums;
+
 namespace Entity.Entities;
 
 public class Room
@@ -7,7 +8,7 @@ public class Room
     public int RoomTypeId { get; set; }
     public string RoomNumber { get; set; } = string.Empty;
     public int Floor { get; set; } = 1;
-    public string Status { get; set; } = RoomStatus.Available;
+    public string Status { get; set; } = "Trống";
     public string RoomTypeName { get; set; } = string.Empty;
     // giá cơ bản của loại phòng
     public double BasePrice { get; set; }

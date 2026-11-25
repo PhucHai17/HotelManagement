@@ -13,7 +13,9 @@ public class Customer :Person
     public string TierName { get; set; } = "Thường";
     // so lan luu tru
     public int StayCount { get; set; } = 0;
-    public string Note { get; set; } = string.Empty;
+    public int? MembershipRankId { get; set; } = 1;
+    public string IdentityCard { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
     public override string ToString() => $"{FullName} ({PhoneNumber})";
 
    

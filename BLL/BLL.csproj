@@ -1,9 +1,33 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
+        <TargetFramework>net10.0-windows</TargetFramework>
         <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Common\Common.csproj" />
+        <ProjectReference Include="..\Models\Models.csproj" />
+        <ProjectReference Include="..\DAL\DAL.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="System" />
+        <Using Include="System.Collections.Generic" />
+        <Using Include="System.Linq" />
+
+        <Using Include="Common.Constants" />
+        <Using Include="Common.Helpers" />
+
+        <Using Include="Entity.Entities" />
+        <Using Include="Entity.DTOs" />
+        <Using Include="Entity.Enums" />
+
+        <Using Include="DAL.Database" />
+        <Using Include="DAL.Interfaces" />
+        <Using Include="DAL.Repositories" />
+    </ItemGroup>
 
 </Project>

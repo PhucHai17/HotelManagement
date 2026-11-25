@@ -1,4 +1,4 @@
-﻿using Entity.Constants;
+﻿using Entity.Enums;
 
 namespace Entity.Entities;
 
@@ -13,7 +13,7 @@ public class Invoice
     public double Discount { get; set; }
     public double VatAmount { get; set; }
     public double TotalAmount { get; set; }
-    public string Status { get; set; } = InvoiceStatus.Unpaid;
+    public InvoiceStatus Status { get; set; } = InvoiceStatus.Unpaid;
     public string IssuedDate { get; set; } = string.Empty;
     public string CustomerName { get; set; } = string.Empty;
     public string RoomNumber { get; set; } = string.Empty;

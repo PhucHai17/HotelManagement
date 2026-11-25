@@ -2,17 +2,13 @@
 
 public class Employee : Person
 {
-    public string EmployeeCode { get; set; } = string.Empty;
-    public string Position { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public DateTime HireDate { get; set; }
-    public decimal Salary { get; set; }
-
+    public int EmployeeId { get; set; }
+    public int AccountId { get; set; }
+    public int ? ManagerId { get; set; }
+    public string Position { get; set; } = "Lễ tân";
+    public string HireDate { get; set; } = string.Empty;
+    public string Status { get; set; } = "Đang làm việc";
+    // Tài khoản liên kết
     public Account? Account { get; set; }
-
-    public virtual ICollection<Booking> ProcessedBookings { get; set; }
-        = new List<Booking>();
-
-    public virtual ICollection<Invoice> ProcessedInvoices { get; set; }
-        = new List<Invoice>();
 }
+   
