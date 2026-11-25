@@ -11,9 +11,7 @@ public static class Program
     [STAThread]
     public static void Main()
     {
-        DBConnection.EnsureDatabaseExists();
-        PasswordMigrationHelper.MigratePlainTextPasswords(DBConnection.ConnectionString);
-        // Xử lý lỗi toàn cục
+        // Xử lý lỗi toàn cục (cài đặt trước mọi thao tác khác)
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
 
         Application.ThreadException += (_, e) =>
@@ -35,11 +33,11 @@ public static class Program
         Application.SetCompatibleTextRenderingDefault(false);
         Application.SetDefaultFont(new Font(AppConstants.FontChuChinh, 10f));
 
-        // Khởi tạo database
+        // Khởi tạo database; không có CSDL thì không thể chạy ứng dụng
         try
         {
             DBConnection.EnsureDatabaseExists();
-            
+            PasswordMigrationHelper.MigratePlainTextPasswords(DBConnection.ConnectionString);
         }
         catch (Exception ex)
         {
@@ -51,6 +49,7 @@ public static class Program
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error
             );
+            return;
         }
 
         // Mở màn hình đăng nhập
