@@ -36,7 +36,7 @@
 </ItemGroup>
 
 <ItemGroup>
-    <Content Include="Scripts\hotelmanagement.db">
+    <Content Include="Scripts\HotelManagement.db">
         <Link>DAL\Scripts\hotelmanagement.db</Link>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
