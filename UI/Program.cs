@@ -2,7 +2,6 @@ using Common.Constants;
 using Common.Helpers;
 using DAL.Database;
 using UI.Forms;
-using UI.Helpers;
 
 namespace UI;
 
@@ -24,7 +23,8 @@ public static class Program
         {
             DBConnection.EnsureDatabaseExists();
             PasswordMigrationHelper.MigratePlainTextPasswords(DBConnection.ConnectionString);
-            Application.Run(new LoginForm { Icon = HotelProIcon.Instance, ShowInTaskbar = true });
+            // Do not load a custom image/icon at startup; WinForms uses its normal default app icon.
+            Application.Run(new LoginForm { ShowInTaskbar = true });
         }
         catch (Exception ex)
         {

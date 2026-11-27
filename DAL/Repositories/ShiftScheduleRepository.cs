@@ -73,7 +73,7 @@ public sealed class ShiftScheduleRepository : BaseRepository, IShiftScheduleRepo
             VALUES (@MaNV, @MaQL, @NgayLam, @MaCa);
             SELECT last_insert_rowid();",
             CreateParameter("@MaNV", schedule.EmployeeId), CreateParameter("@MaQL", schedule.ManagerId),
-            CreateParameter("@NgayLam", schedule.WorkDate), CreateParameter("@MaCa", ParseShiftId(schedule.ShiftType)) ) ?? 0);
+            CreateParameter("@NgayLam", schedule.WorkDate), CreateParameter("@MaCa", ParseShiftId(schedule.ShiftType))) ?? 0);
     }
 
     public bool Update(ShiftSchedule schedule)
@@ -94,7 +94,8 @@ public sealed class ShiftScheduleRepository : BaseRepository, IShiftScheduleRepo
 
     private static int ParseShiftId(string value) => int.TryParse(value, out var id) ? id : 1;
 
-    private static void EnsureSchema()
+    // This must be an instance method because CreateParameter is provided by BaseRepository.
+    private void EnsureSchema()
     {
         if (_schemaReady) return;
         lock (SchemaLock)
