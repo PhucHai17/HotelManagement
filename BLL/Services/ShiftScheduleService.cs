@@ -6,16 +6,21 @@ public sealed class ShiftScheduleService : IShiftScheduleService
 {
     private readonly IShiftScheduleRepository _repo;
     public ShiftScheduleService() : this(new ShiftScheduleRepository()) { }
-    public ShiftScheduleService(IShiftScheduleRepository repo) => _repo = repo;
+    public ShiftScheduleService(IShiftScheduleRepository repo) => _repo = repo ?? throw new ArgumentNullException(nameof(repo));
 
     private static bool CanManage => SessionManager.CurrentUser?.RoleId == AppConstants.MaVTQuanLy || SessionManager.CurrentUser?.RoleId == AppConstants.MaVTAdmin;
     public List<ShiftSchedule> GetAll(DateTime fromDate, DateTime toDate)
     {
-        SessionManager.EnsureAnyPermission("Bạn không có quyền xem lịch phân ca!", AppConstants.QuyenQuanLyNhanVien, AppConstants.QuyenXemBaoCao);
+        if (!CanManage)
+            SessionManager.EnsureAnyPermission("Bạn không có quyền xem lịch phân ca!", AppConstants.QuyenQuanLyNhanVien, AppConstants.QuyenXemBaoCao);
         var employeeId = CanManage ? null : SessionManager.CurrentEmployee?.EmployeeId;
         return _repo.GetAll(fromDate.Date, toDate.Date, employeeId);
     }
-    public List<WorkShift> GetWorkShifts() => _repo.GetWorkShifts();
+    public List<WorkShift> GetWorkShifts()
+    {
+        if (!CanManage) SessionManager.EnsureAnyPermission("Bạn không có quyền xem ca làm việc!", AppConstants.QuyenQuanLyNhanVien, AppConstants.QuyenXemBaoCao);
+        return _repo.GetWorkShifts();
+    }
     public bool Add(ShiftSchedule schedule, out string message)
     {
         if (!CanManage) { message = "Chỉ quản lý hoặc quản trị viên được phân ca."; return false; }

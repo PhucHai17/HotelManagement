@@ -3,7 +3,7 @@ using BLL.Services;
 
 namespace BLL;
 
-public static class AppServices
+public static partial class AppServices
 {
     private static Lazy<IAuthService> _auth = CreateLazy<IAuthService>(() => new AuthService());
     private static Lazy<ICustomerService> _customer = CreateLazy<ICustomerService>(() => new CustomerService());
