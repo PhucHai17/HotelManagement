@@ -192,7 +192,20 @@ public class CustomerAccountTab : UserControl
             Cursor = Cursors.Hand
         };
         UIHelper.DinhDangNutBamPhu(btnKhoiPhuc);
-        btnKhoiPhuc.Click += (s, e) => NapThongTinKhachHang(SessionManager.CurrentCustomer);
+        btnKhoiPhuc.Click += (s, e) => TaiDuLieuTaiKhoan();
+
+        EventHandler onProfileFieldChanged = (s, e) =>
+        {
+            if (SessionManager.CurrentCustomer != null && SessionManager.CurrentCustomer.CustomerId > 0)
+            {
+                btnKhoiPhuc.Enabled = true;
+                UIHelper.DinhDangNutBamPhu(btnKhoiPhuc);
+            }
+        };
+        txtHoTen.TextChanged += onProfileFieldChanged;
+        txtSoDienThoai.TextChanged += onProfileFieldChanged;
+        txtEmail.TextChanged += onProfileFieldChanged;
+        txtCCCD.TextChanged += onProfileFieldChanged;
 
         pnlFormContent.Controls.Add(btnLuuThayDoi);
         pnlFormContent.Controls.Add(btnKhoiPhuc);
@@ -484,8 +497,7 @@ public class CustomerAccountTab : UserControl
             {
                 try
                 {
-                    var repo = new CustomerRepository();
-                    var khachDb = repo.GetByAccountId(acc.AccountId);
+                    var khachDb = AppServices.Customer.GetByAccountId(acc.AccountId);
                     if (khachDb != null && khachDb.CustomerId > 0)
                     {
                         SessionManager.CurrentCustomer = khachDb;
@@ -644,41 +656,18 @@ public class CustomerAccountTab : UserControl
 
         try
         {
-            var repo = new CustomerRepository();
-            if (!string.IsNullOrWhiteSpace(sdt))
-            {
-                var existingPhone = repo.GetByIdentityCardOrPhone(sdt);
-                if (existingPhone != null && existingPhone.CustomerId != khach.CustomerId)
-                {
-                    MessageBox.Show("Số điện thoại này đã được sử dụng bởi khách hàng khác!", "Lỗi trùng lặp", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    txtSoDienThoai.Focus();
-                    return;
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(cccd))
-            {
-                var existingCccd = repo.GetByIdentityCardOrPhone(cccd);
-                if (existingCccd != null && existingCccd.CustomerId != khach.CustomerId)
-                {
-                    MessageBox.Show("Số CCCD này đã được sử dụng bởi khách hàng khác!", "Lỗi trùng lặp", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    txtCCCD.Focus();
-                    return;
-                }
-            }
-
-            thanhCong = repo.Update(khach);
-            message = thanhCong ? "Cập nhật hồ sơ thành công!" : "Không thể cập nhật hồ sơ vào lúc này!";
+            thanhCong = AppServices.Customer.SaveCustomer(khach, out message);
         }
         catch (Exception ex)
         {
-            AppLogger.Error(ex, "Cập nhật hồ sơ khách hàng trực tiếp qua Repository");
+            AppLogger.Error(ex, "Cập nhật hồ sơ khách hàng qua CustomerService");
             message = "Đã xảy ra lỗi khi lưu thông tin hồ sơ!";
         }
 
         if (thanhCong)
         {
             SessionManager.CurrentCustomer = khach;
+            NapThongTinKhachHang(khach);
             OnProfileUpdated?.Invoke(hoTen);
             MessageBox.Show("Cập nhật thông tin hồ sơ thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }

@@ -32,6 +32,12 @@ public class CustomerService : ICustomerService
             AppConstants.QuyenQuanLyPhong);
         return _customerRepo.Search(keyword);
     }
+    
+    public Customer? GetByAccountId(int accountId)
+    {
+        if (accountId <= 0) return null;
+        return _customerRepo.GetByAccountId(accountId);
+    }
 
     public Customer? GetByIdentityCardOrPhone(string keyword)
     {
@@ -41,8 +47,7 @@ public class CustomerService : ICustomerService
             AppConstants.QuyenQuanLyPhong);
         return _customerRepo.GetByIdentityCardOrPhone(keyword);
     }
-
-    // Lưu thông tin khách hàng mới hoặc cập nhật thông tin khách hàng cũ
+    
     public bool SaveCustomer(Customer customer, out string message)
     {
         message = string.Empty;
@@ -75,6 +80,7 @@ public class CustomerService : ICustomerService
 
         customer.FullName = customer.FullName.Trim();
         customer.PhoneNumber = phone;
+        customer.Email = customer.Email?.Trim() ?? string.Empty;
         customer.NationalId = nationalId;
 
         if (!string.IsNullOrWhiteSpace(phone))

@@ -143,7 +143,22 @@ public class AuthService : IAuthService
             return false;
         }
 
-        var username = !string.IsNullOrWhiteSpace(email) ? email.Trim() : phone.Trim();
+        var cleanPhone = phone.Trim();
+        var cleanIdentityCard = identityCard?.Trim() ?? string.Empty;
+
+        if (_customerRepo.GetByIdentityCardOrPhone(cleanPhone) != null)
+        {
+            message = "Số điện thoại này đã được đăng ký bởi tài khoản khác!";
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(cleanIdentityCard) && _customerRepo.GetByIdentityCardOrPhone(cleanIdentityCard) != null)
+        {
+            message = "Số CCCD / Hộ chiếu này đã được đăng ký bởi tài khoản khác!";
+            return false;
+        }
+
+        var username = !string.IsNullOrWhiteSpace(email) ? email.Trim() : cleanPhone;
         if (_accountRepo.Exists(username))
         {
             message = "Tài khoản với Email hoặc SĐT này đã tồn tại trong hệ thống!";
@@ -168,10 +183,13 @@ public class AuthService : IAuthService
         var customer = new Customer
         {
             AccountId = newAccountId,
+            TierId = 1,
             MembershipRankId = 1,
             FullName = fullName.Trim(),
+            PhoneNumber = phone.Trim(),
             Phone = phone.Trim(),
             Email = email?.Trim() ?? string.Empty,
+            NationalId = identityCard?.Trim() ?? string.Empty,
             IdentityCard = identityCard?.Trim() ?? string.Empty,
             LoyaltyPoints = 0
         };
@@ -220,8 +238,7 @@ public class AuthService : IAuthService
             message = "Mật khẩu hiện tại không chính xác!";
             return false;
         }
-
-        // Băm mật khẩu mới trước khi lưu xuống DB
+        
         var newPasswordHash = PasswordHelper.HashPassword(newPassword);
         var result = _accountRepo.ChangePassword(accountId, newPasswordHash);
         if (result)
